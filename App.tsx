@@ -27,7 +27,8 @@ import {
   MessageSquare,
   ShieldAlert,
   Settings,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { UserState, Post } from './types';
 import { INITIAL_POSTS } from './constants';
@@ -45,9 +46,6 @@ import StreamChat from './components/StreamChat';
 import AdminPanel from './components/AdminPanel';
 import { audioService } from './services/audioService';
 
-/**
- * NavItem component for sidebar navigation
- */
 const NavItem: React.FC<{
   active: boolean;
   onClick: () => void;
@@ -89,12 +87,17 @@ const App: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
 
-  // Check URL for /admin routing
+  // SPA Routing check for Vercel
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path.endsWith('/admin')) {
-      setActiveTab('admin');
-    }
+    const handleLocation = () => {
+      const path = window.location.pathname;
+      if (path === '/admin') {
+        setActiveTab('admin');
+      }
+    };
+    handleLocation();
+    window.addEventListener('popstate', handleLocation);
+    return () => window.removeEventListener('popstate', handleLocation);
   }, []);
 
   const handleAuthComplete = (newUser: UserState) => {
@@ -104,6 +107,7 @@ const App: React.FC = () => {
 
   const logout = () => {
     setUser(null);
+    window.history.pushState({}, '', '/');
   };
 
   const toggleSound = () => {
@@ -115,6 +119,11 @@ const App: React.FC = () => {
   const navigateTo = (tab: any) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
+    if (tab === 'admin') {
+      window.history.pushState({}, '', '/admin');
+    } else {
+      window.history.pushState({}, '', '/');
+    }
     if (soundEnabled) audioService.playClick();
   };
 
@@ -131,12 +140,19 @@ const App: React.FC = () => {
       {/* Global Motivational Toast System */}
       <MotivationalToast />
 
-      {/* Admin Broadcast Banner */}
+      {/* ADMIN CONTROL: GLOBAL BROADCAST BANNER */}
       {adminBroadcast && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white p-3 text-center font-black text-xs md:text-sm animate-bounce shadow-xl flex items-center justify-center gap-3">
-          <AlertCircle size={18} />
-          {adminBroadcast}
-          <button onClick={() => setAdminBroadcast(null)} className="absolute left-4"><X size={18}/></button>
+        <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
+          <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
+            <ShieldCheck size={20} />
+          </div>
+          <span className="flex-1 drop-shadow-sm">{adminBroadcast}</span>
+          <button 
+            onClick={() => { setAdminBroadcast(null); if(soundEnabled) audioService.playClick(); }} 
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors border border-white/20"
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
 
@@ -262,7 +278,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Scrollable Area - Conditional Padding for Full Screen Chat */}
+        {/* Scrollable Area */}
         <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab || isAdminTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
           <div className={`h-full ${isChatTab || isAdminTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
             {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
@@ -295,12 +311,12 @@ const App: React.FC = () => {
         )}
 
         {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
           <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
-          <button onClick={() => navigateTo('studyplan')} className={`p-2 ${activeTab === 'studyplan' ? 'text-indigo-600' : 'text-gray-400'}`}><CalendarDays size={24} /></button>
+          <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
           <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
-          <button onClick={() => navigateTo('summaries')} className={`p-2 ${activeTab === 'summaries' ? 'text-blue-600' : 'text-gray-400'}`}><FileText size={24} /></button>
-          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
+          <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
+          <button onClick={() => navigateTo('admin')} className={`p-2 ${activeTab === 'admin' ? 'text-gray-900 font-bold' : 'text-gray-400'}`}><ShieldAlert size={24} /></button>
         </nav>
 
         {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
