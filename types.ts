@@ -27,6 +27,14 @@ export interface Summary {
   url?: string;
 }
 
+export interface PostComment {
+  id: string;
+  author: string;
+  content: string;
+  time: string;
+  avatarSeed: string;
+}
+
 export interface Post {
   id: number;
   author: string;
@@ -34,6 +42,8 @@ export interface Post {
   content: string;
   likes: number;
   comments: number;
+  commentsList?: PostComment[];
+  isLiked?: boolean;
   tag: string;
   avatarSeed: string;
 }
