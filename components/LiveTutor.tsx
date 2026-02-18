@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, X, Volume2, BrainCircuit, Sparkles, Loader2 } from 'lucide-react';
+import { Mic, MicOff, X, Volume2, VolumeX, PhoneOff, Phone, BrainCircuit, Sparkles, Loader2, User, MoreHorizontal, MessageSquare } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { LiveServerMessage, Blob } from '@google/genai';
 
@@ -13,12 +13,34 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userName }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const sessionRef = useRef<any>(null);
+  const timerRef = useRef<any>(null);
+
+  // Timer logic
+  useEffect(() => {
+    if (isActive) {
+      timerRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+      setCallDuration(0);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [isActive]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   // Helper functions for audio encoding/decoding
   const encode = (bytes: Uint8Array) => {
@@ -80,6 +102,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userName }) => {
           const source = audioContextRef.current!.createMediaStreamSource(stream);
           const scriptProcessor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
           scriptProcessor.onaudioprocess = (e) => {
+            if (isMuted) return; // Simple mute logic
             const inputData = e.inputBuffer.getChannelData(0);
             const pcmBlob = createBlob(inputData);
             sessionPromise.then(session => {
@@ -114,7 +137,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userName }) => {
             setIsSpeaking(false);
           }
         },
-        onerror: (e) => {
+        onerror: (e: any) => {
           console.error('Live Tutor Error:', e);
           stopSession();
         },
@@ -134,6 +157,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userName }) => {
     setIsActive(false);
     setIsConnecting(false);
     setIsSpeaking(false);
+    setIsMuted(false);
   };
 
   useEffect(() => {
@@ -141,75 +165,161 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userName }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-blue-900/90 backdrop-blur-xl">
-      <div className="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-2xl relative flex flex-col h-[80vh] animate-slide-up">
-        {/* Header */}
-        <div className="p-8 border-b border-gray-100 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white">
-              <BrainCircuit size={28} />
-            </div>
-            <div>
-              <h3 className="font-black text-xl text-gray-800">الأستاذ الافتراضي المباشر</h3>
-              <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">محادثة صوتية ذكية</p>
-            </div>
+    <div className="fixed inset-0 z-[200] flex flex-col items-center bg-[#050A18] text-white font-['Cairo'] overflow-hidden animate-in fade-in duration-500">
+      
+      {/* Immersive Background Gradients */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className={`absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_50%_50%,rgba(37,99,235,0.15)_0%,transparent_50%)] transition-opacity duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`}></div>
+        <div className={`absolute bottom-[-10%] right-[-10%] w-[100%] h-[100%] bg-[radial-gradient(circle_at_50%_50%,rgba(79,70,229,0.1)_0%,transparent_50%)]`}></div>
+        {isSpeaking && (
+          <div className="absolute inset-0 bg-blue-500/5 animate-pulse duration-700"></div>
+        )}
+      </div>
+
+      {/* Top Section: Identity & Status */}
+      <div className="relative z-10 w-full px-8 pt-16 flex flex-col items-center text-center">
+        <div className="mb-6">
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 shadow-2xl mx-auto">
+            <BrainCircuit size={32} className="text-blue-400" />
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-gray-100 rounded-2xl transition-all text-gray-400">
-            <X size={24} />
-          </button>
         </div>
-
-        {/* Visualizer Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-gray-50/50">
-          <div className="relative mb-12">
-            {/* Pulsing rings */}
-            <div className={`absolute inset-0 rounded-full bg-blue-400/20 animate-ping ${isActive ? 'block' : 'hidden'}`}></div>
-            <div className={`absolute inset-0 rounded-full bg-blue-400/10 scale-150 animate-pulse ${isSpeaking ? 'block' : 'hidden'}`}></div>
-            
-            <div className={`w-48 h-48 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 ${
-              isActive ? (isSpeaking ? 'bg-indigo-600 scale-110' : 'bg-blue-600') : 'bg-gray-200'
-            }`}>
-              {isConnecting ? (
-                <Loader2 size={64} className="text-blue-200 animate-spin" />
-              ) : isActive ? (
-                isSpeaking ? <Volume2 size={64} className="text-white animate-bounce" /> : <Mic size={64} className="text-white" />
-              ) : (
-                <MicOff size={64} className="text-gray-400" />
-              )}
+        
+        <h3 className="text-2xl md:text-3xl font-black mb-2 tracking-tight">الأستاذ الافتراضي</h3>
+        
+        <div className="flex flex-col items-center">
+          {isConnecting ? (
+            <div className="flex items-center gap-2 text-blue-400 font-bold text-sm animate-pulse">
+              <Loader2 size={16} className="animate-spin" /> جاري الاتصال...
             </div>
-          </div>
-
-          <h4 className="text-2xl font-black text-gray-800 mb-4">
-            {isConnecting ? 'جاري الاتصال...' : isActive ? (isSpeaking ? 'الأستاذ يتحدث...' : 'أنا أسمعك، تفضل بسؤالك') : `مرحباً ${userName.split(' ')[0]}!`}
-          </h4>
-          <p className="text-gray-500 font-medium max-w-sm mx-auto leading-relaxed">
-            {isActive ? 'تحدث بشكل طبيعي باللغة العربية أو الدارجة حول أي درس في البكالوريا.' : 'اضغط على الزر أدناه لبدء جلسة مراجعة صوتية مباشرة مع الذكاء الاصطناعي.'}
-          </p>
-        </div>
-
-        {/* Footer Controls */}
-        <div className="p-10 bg-white border-t border-gray-100 flex flex-col items-center gap-6">
-          {!isActive ? (
-            <button 
-              onClick={startSession}
-              disabled={isConnecting}
-              className="px-12 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-4"
-            >
-              <Mic size={24} /> ابدأ التحدث الآن
-            </button>
+          ) : isActive ? (
+            <div className="space-y-1">
+              <p className="text-blue-400 font-black text-sm uppercase tracking-widest">{isSpeaking ? 'يتحدث الآن...' : 'بانتظارك...'}</p>
+              <p className="text-white/60 font-mono text-lg font-bold">{formatDuration(callDuration)}</p>
+            </div>
           ) : (
-            <button 
-              onClick={stopSession}
-              className="px-12 py-5 bg-red-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-red-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-4"
-            >
-              <MicOff size={24} /> إنهاء الجلسة
-            </button>
+            <p className="text-white/40 font-bold text-sm">مكالمة ذكية مشفرة</p>
           )}
-          
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black border border-blue-100 uppercase tracking-widest">
-            <Sparkles size={12} /> مدعوم بـ Gemini 2.5 Flash Native Audio
+        </div>
+      </div>
+
+      {/* Center Section: Visualizer / Avatar */}
+      <div className="relative z-10 flex-1 w-full flex items-center justify-center py-12">
+        <div className="relative">
+          {/* Animated Ripples */}
+          {isActive && (
+            <>
+              <div className={`absolute inset-0 rounded-full border-2 border-blue-500/30 animate-ping duration-[3s]`}></div>
+              <div className={`absolute inset-0 rounded-full border-2 border-indigo-500/20 animate-ping duration-[4s] delay-700`}></div>
+              {isSpeaking && (
+                 <div className="absolute inset-[-40px] rounded-full border border-blue-400/10 animate-pulse"></div>
+              )}
+            </>
+          )}
+
+          {/* Main Visualizer Orb */}
+          <div className={`
+            w-44 h-44 md:w-56 md:h-56 rounded-full flex items-center justify-center shadow-[0_0_80px_rgba(37,99,235,0.2)] transition-all duration-700 relative z-20 border-4
+            ${isActive ? 'bg-gradient-to-br from-blue-600 to-indigo-700 border-white/20' : 'bg-white/5 border-white/5'}
+            ${isSpeaking ? 'scale-110 shadow-[0_0_100px_rgba(37,99,235,0.4)]' : 'scale-100'}
+          `}>
+            {isConnecting ? (
+              <Loader2 size={64} className="text-blue-200 animate-spin" />
+            ) : isActive ? (
+              <div className="flex items-center gap-1.5 h-12">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div 
+                    key={i} 
+                    className={`w-1.5 bg-white rounded-full transition-all duration-300 ${isSpeaking ? 'animate-bounce-slow' : 'h-2 opacity-50'}`}
+                    style={{ 
+                      height: isSpeaking ? `${Math.random() * 40 + 20}px` : '8px',
+                      animationDelay: `${i * 0.1}s` 
+                    }}
+                  ></div>
+                ))}
+              </div>
+            ) : (
+              <User size={80} className="text-white/10" />
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Bottom Section: Call Controls */}
+      <div className="relative z-10 w-full px-8 pb-20 md:pb-24">
+        <div className="max-w-md mx-auto">
+          {isActive ? (
+            <div className="grid grid-cols-3 gap-6 items-center">
+              {/* Mute Button */}
+              <div className="flex flex-col items-center gap-3">
+                <button 
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-xl border transition-all active:scale-90 ${
+                    isMuted ? 'bg-white text-black border-white' : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                  }`}
+                >
+                  {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                </button>
+                <span className="text-[10px] font-black uppercase text-white/50">{isMuted ? 'إلغاء الكتم' : 'كتم'}</span>
+              </div>
+
+              {/* End Call Button */}
+              <div className="flex flex-col items-center gap-3">
+                <button 
+                  onClick={stopSession}
+                  className="w-20 h-20 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-2xl shadow-red-900/40 active:scale-95 transition-all"
+                >
+                  <PhoneOff size={32} />
+                </button>
+                <span className="text-[10px] font-black uppercase text-red-500">إنهاء</span>
+              </div>
+
+              {/* Speaker/Volume Button */}
+              <div className="flex flex-col items-center gap-3">
+                <button 
+                  className="w-16 h-16 bg-white/10 backdrop-blur-xl text-white rounded-full flex items-center justify-center border border-white/20 hover:bg-white/20 active:scale-90 transition-all"
+                >
+                  <Volume2 size={24} />
+                </button>
+                <span className="text-[10px] font-black uppercase text-white/50">مكبر الصوت</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8 items-center">
+               <div className="flex gap-10">
+                  <button className="flex flex-col items-center gap-2 text-white/40 hover:text-blue-400 transition-colors">
+                    <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center border border-white/5"><MessageSquare size={20} /></div>
+                    <span className="text-[10px] font-black">رسالة</span>
+                  </button>
+                  <button className="flex flex-col items-center gap-2 text-white/40 hover:text-blue-400 transition-colors">
+                    <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center border border-white/5"><MoreHorizontal size={20} /></div>
+                    <span className="text-[10px] font-black">المزيد</span>
+                  </button>
+               </div>
+
+               <button 
+                onClick={startSession}
+                disabled={isConnecting}
+                className="w-full py-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[2.5rem] font-black text-xl shadow-2xl shadow-emerald-900/20 active:scale-95 transition-all flex items-center justify-center gap-4"
+              >
+                {isConnecting ? <Loader2 className="animate-spin" /> : <><Phone size={24} fill="currentColor" /> اتصال ذكي مباشر</>}
+              </button>
+
+              <button 
+                onClick={onClose}
+                className="text-white/30 font-bold text-sm hover:text-white transition-colors"
+              >
+                إغلاق الواجهة
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Decorative Branding Footnote */}
+      <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none opacity-20">
+         <div className="flex items-center justify-center gap-2 text-[10px] font-black text-blue-200 uppercase tracking-[0.3em]">
+            <Sparkles size={10} /> DzairEdu Pro AI <Sparkles size={10} />
+         </div>
       </div>
     </div>
   );
