@@ -254,4 +254,60 @@ const App: React.FC = () => {
 
             <button 
               onClick={toggleSound}
-              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100
+              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-white border-gray-100 text-gray-400'}`}
+            >
+              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+            
+            <button className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 relative hover:text-blue-600 transition-all group">
+               <Bell size={20} />
+               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></span>
+            </button>
+          </div>
+        </header>
+
+        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
+          <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
+            {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
+            {activeTab === 'profile' && <Profile user={user} />}
+            {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={setPosts} />}
+            {activeTab === 'summaries' && <Summaries user={user} soundEnabled={soundEnabled} />}
+            {activeTab === 'videos' && <VideoLessons />}
+            {activeTab === 'studyplan' && <StudyPlan user={user} />}
+            {activeTab === 'streamchat' && <StreamChat user={user} />}
+          </div>
+        </main>
+
+        {!showAi && !showLiveTutor && !isChatTab && (
+          <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
+            <button 
+              onClick={() => { setShowLiveTutor(true); if(soundEnabled) audioService.playClick(); }}
+              className="bg-indigo-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
+            >
+              <Mic size={24} className="md:w-8 md:h-8" />
+            </button>
+            <button 
+              onClick={() => { setShowAi(true); if(soundEnabled) audioService.playClick(); }}
+              className="bg-blue-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
+            >
+              <BrainCircuit size={24} className="md:w-8 md:h-8" />
+            </button>
+          </div>
+        )}
+
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
+          <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
+          <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
+          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
+          <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
+          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
+        </nav>
+
+        {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
+        {showLiveTutor && <LiveTutor userName={user.name} onClose={() => setShowLiveTutor(false)} />}
+      </div>
+    </div>
+  );
+};
+
+export default App;
