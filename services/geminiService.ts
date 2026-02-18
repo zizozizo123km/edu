@@ -5,8 +5,23 @@ import { AI_SYSTEM_INSTRUCTION } from "../constants";
 export class GeminiService {
   constructor() {}
 
+  // الحصول على المفتاح النشط (سواء من الإعدادات أو البيئة الافتراضية)
+  public getActiveApiKey(): string {
+    const override = localStorage.getItem('GEMINI_API_KEY_OVERRIDE');
+    return override || process.env.API_KEY || "";
+  }
+
+  // حفظ مفتاح جديد من لوحة التحكم
+  public setApiKeyOverride(key: string) {
+    if (key.trim()) {
+      localStorage.setItem('GEMINI_API_KEY_OVERRIDE', key.trim());
+    } else {
+      localStorage.removeItem('GEMINI_API_KEY_OVERRIDE');
+    }
+  }
+
   private getAI() {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return new GoogleGenAI({ apiKey: this.getActiveApiKey() });
   }
 
   async *streamChat(message: string, history: any[]) {
@@ -75,7 +90,6 @@ export class GeminiService {
       const videos: any[] = [];
       const seenUrls = new Set<string>();
 
-      // 1. استخراج الروابط من Grounding Metadata
       groundingChunks.forEach((chunk: any) => {
         if (chunk.web && chunk.web.uri && (chunk.web.uri.includes('youtube.com') || chunk.web.uri.includes('youtu.be'))) {
           const url = chunk.web.uri;
@@ -90,7 +104,6 @@ export class GeminiService {
         }
       });
 
-      // 2. Regex لاستخراج الروابط من النص (بما في ذلك Shorts)
       const youtubeRegex = /(https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/)[\w-]+|https?:\/\/youtu\.be\/[\w-]+)/g;
       const matches = text.match(youtubeRegex);
       if (matches) {

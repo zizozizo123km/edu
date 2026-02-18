@@ -25,11 +25,15 @@ import {
   Lock,
   Terminal,
   Cpu,
-  Database
+  Database,
+  Key,
+  RefreshCw,
+  EyeOff
 } from 'lucide-react';
 import { Post, UserState, Summary } from '../types';
 import { SUMMARIES_DATA } from '../constants';
 import { audioService } from '../services/audioService';
+import { geminiService } from '../services/geminiService';
 
 interface AdminPanelProps {
   user: UserState;
@@ -43,9 +47,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
   const [summaries, setSummaries] = useState<Summary[]>(SUMMARIES_DATA);
   const [broadcastInput, setBroadcastInput] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  
+  // API Key Settings State
+  const [apiKeyInput, setApiKeyInput] = useState(geminiService.getActiveApiKey());
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isSavingKey, setIsSavingKey] = useState(false);
 
   useEffect(() => {
-    // محاكاة سجلات حية للنظام
     const interval = setInterval(() => {
       const actions = [
         "دخول مستخدم جديد من ولاية وهران",
@@ -60,7 +68,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
     return () => clearInterval(interval);
   }, []);
 
-  // بيانات المستخدمين المحاكاة
   const [mockUsers, setMockUsers] = useState([
     { id: 1, name: 'أحمد محمود', stream: 'علوم تجريبية', status: 'نشط', rank: 'طالب متميز' },
     { id: 2, name: 'ليلى بن عودة', stream: 'رياضيات', status: 'نشط', rank: 'طالب مجتهد' },
@@ -76,13 +83,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
     }
   };
 
-  const deletePost = (id: number) => {
-    onPostUpdate(posts.filter(p => p.id !== id));
+  const handleSaveApiKey = () => {
+    setIsSavingKey(true);
     audioService.playClick();
+    
+    setTimeout(() => {
+      geminiService.setApiKeyOverride(apiKeyInput);
+      setIsSavingKey(false);
+      audioService.playSuccess();
+      alert('تم تحديث مفتاح Gemini API بنجاح لجميع أدوات التطبيق.');
+    }, 800);
   };
 
-  const deleteSummary = (id: number | string) => {
-    setSummaries(summaries.filter(s => s.id !== id));
+  const resetApiKey = () => {
+    if (confirm('هل أنت متأكد من العودة للمفتاح الافتراضي في ملف البيئة؟')) {
+      setApiKeyInput('');
+      geminiService.setApiKeyOverride('');
+      audioService.playSuccess();
+    }
+  };
+
+  const deletePost = (id: number) => {
+    onPostUpdate(posts.filter(p => p.id !== id));
     audioService.playClick();
   };
 
@@ -94,7 +116,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
   return (
     <div className="flex flex-col h-full w-full bg-[#020617] text-slate-300 animate-slide-up overflow-hidden">
       
-      {/* Admin Header - Dark Console Style */}
+      {/* Admin Header */}
       <div className="px-6 md:px-10 py-6 bg-slate-900/50 backdrop-blur-xl border-b border-white/5 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
@@ -178,18 +200,96 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
                       </div>
                     ))}
                  </div>
-                 <div className="mt-8 p-6 bg-slate-900/80 rounded-2xl border border-white/5">
-                    <div className="flex justify-between items-center mb-4">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">سعة الخادم</span>
-                       <span className="text-xs font-black text-white">42%</span>
-                    </div>
-                    <div className="w-full h-2 bg-black rounded-full overflow-hidden">
-                       <div className="h-full bg-emerald-500 w-[42%] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                    </div>
-                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {activeView === 'settings' && (
+           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 animate-slide-up">
+              <div className="lg:col-span-2 space-y-10">
+                {/* Gemini API Key Configuration Section */}
+                <div className="bg-slate-900/80 p-10 rounded-[3.5rem] border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+                   <div className="relative z-10">
+                      <div className="flex items-center gap-4 mb-8">
+                         <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/30">
+                            <Key size={28} />
+                         </div>
+                         <div>
+                            <h3 className="text-2xl font-black text-white">إعدادات Gemini API</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">تحديث المفتاح لجميع أدوات المساعد الذكي</p>
+                         </div>
+                      </div>
+
+                      <div className="space-y-6">
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">مفتاح API الحالي</label>
+                            <div className="relative group">
+                               <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-400">
+                                  <Lock size={20} />
+                               </div>
+                               <input 
+                                  type={showApiKey ? "text" : "password"} 
+                                  className="w-full pr-14 pl-14 py-5 bg-black/40 border-2 border-white/5 rounded-3xl focus:border-indigo-500 outline-none transition-all font-mono text-sm text-indigo-200"
+                                  value={apiKeyInput}
+                                  onChange={(e) => setApiKeyInput(e.target.value)}
+                                  placeholder="أدخل مفتاح Gemini API هنا..."
+                               />
+                               <button 
+                                  onClick={() => setShowApiKey(!showApiKey)}
+                                  className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors"
+                               >
+                                  {showApiKey ? <EyeOff size={20} /> : <Eye size={20} />}
+                               </button>
+                            </div>
+                         </div>
+
+                         <div className="flex gap-4 pt-4">
+                            <button 
+                               onClick={handleSaveApiKey}
+                               disabled={isSavingKey}
+                               className="flex-1 py-5 bg-indigo-600 text-white rounded-3xl font-black text-sm shadow-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                               {isSavingKey ? <Loader2 size={20} className="animate-spin" /> : <><RefreshCw size={20} /> حفظ وتطبيق المفتاح الجديد</>}
+                            </button>
+                            <button 
+                               onClick={resetApiKey}
+                               className="px-8 py-5 bg-white/5 text-slate-400 rounded-3xl font-black text-sm border border-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all"
+                            >
+                               إعادة تعيين
+                            </button>
+                         </div>
+                         
+                         <p className="text-[10px] text-slate-500 font-medium italic mt-4">
+                           * ملاحظة: هذا المفتاح سيتم تخزينه محلياً في متصفحك وسيكون له الأولوية على المفتاح المدمج في الكود.
+                         </p>
+                      </div>
+                   </div>
+                   <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl"></div>
+                </div>
+
+                <div className="bg-slate-900/50 p-10 rounded-[3.5rem] border border-white/5">
+                   <h3 className="font-black text-xl mb-10 flex items-center gap-3 text-white"><Settings className="text-slate-500" /> تفضيلات النظام</h3>
+                   <div className="space-y-8">
+                      <SettingToggle label="تفعيل التسجيل الجديد" active={true} />
+                      <SettingToggle label="وضع الصيانة الفوري" active={false} />
+                      <SettingToggle label="مساعد الذكاء الاصطناعي (Pro)" active={true} />
+                      <SettingToggle label="السماح بالتعليقات العامة" active={true} />
+                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-10">
+                 <div className="bg-slate-950 p-10 rounded-[3.5rem] border border-red-900/20 flex flex-col justify-center items-center text-center">
+                    <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-8 border border-red-500/20">
+                       <Lock size={48} />
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-4">بروتوكول الطوارئ</h3>
+                    <p className="text-slate-500 font-medium mb-10 leading-relaxed text-sm">هذا الإجراء سيقوم بتصفير السجلات وإعادة تشغيل محرك الربط.</p>
+                    <button className="w-full py-4 bg-red-600/20 text-red-500 border border-red-500/30 rounded-2xl font-black text-xs hover:bg-red-600 hover:text-white transition-all">إعادة تهيئة النظام</button>
+                 </div>
+              </div>
+           </div>
         )}
 
         {activeView === 'users' && (
@@ -230,37 +330,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
           </div>
         )}
 
-        {activeView === 'settings' && (
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-slide-up">
-              <div className="bg-slate-900/50 p-10 rounded-[3.5rem] border border-white/5">
-                 <h3 className="font-black text-xl mb-10 flex items-center gap-3 text-white"><Settings className="text-slate-500" /> مفاتيح التحكم اللحظي</h3>
-                 <div className="space-y-8">
-                    <SettingToggle label="تفعيل التسجيل الجديد" active={true} />
-                    <SettingToggle label="وضع الصيانة الفوري" active={false} />
-                    <SettingToggle label="مساعد الذكاء الاصطناعي (Pro)" active={true} />
-                    <SettingToggle label="السماح بالتعليقات العامة" active={true} />
-                    <div className="pt-6">
-                       <button className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-sm shadow-xl hover:bg-slate-100 transition-all">حفظ التكوين المركزي</button>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="bg-slate-950 p-10 rounded-[3.5rem] border border-red-900/20 flex flex-col justify-center items-center text-center">
-                 <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-8 border border-red-500/20">
-                    <Lock size={48} />
-                 </div>
-                 <h3 className="text-2xl font-black text-white mb-4">بروتوكول الطوارئ</h3>
-                 <p className="text-slate-500 font-medium mb-10 leading-relaxed text-sm">هذا الإجراء سيقوم بتصفير السجلات وإعادة تشغيل محرك الربط. لا يمكن التراجع عن هذا الفعل.</p>
-                 <button className="w-full py-4 bg-red-600/20 text-red-500 border border-red-500/30 rounded-2xl font-black text-xs hover:bg-red-600 hover:text-white transition-all">إعادة تهيئة النظام (System Wipe)</button>
-              </div>
-           </div>
-        )}
-
       </div>
     </div>
   );
 };
 
+// ... Rest of the components (StatCard, TabButton, SettingToggle, etc.)
 const StatCard = ({ label, value, color, icon }: any) => (
   <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] hover:bg-white/10 transition-all">
     <div className="flex items-center gap-3 mb-2 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
@@ -282,13 +357,23 @@ const TabButton = ({ active, onClick, icon, label }: any) => (
   </button>
 );
 
-const SettingToggle = ({ label, active }: { label: string, active: boolean }) => (
-  <div className="flex items-center justify-between p-2">
-    <span className="font-bold text-slate-300 text-sm">{label}</span>
-    <button className={`w-14 h-8 rounded-full transition-all relative ${active ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800'}`}>
-       <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${active ? 'right-7' : 'right-1'}`}></div>
-    </button>
-  </div>
+const SettingToggle = ({ label, active }: { label: string, active: boolean }) => {
+  const [isActive, setIsActive] = useState(active);
+  return (
+    <div className="flex items-center justify-between p-2">
+      <span className="font-bold text-slate-300 text-sm">{label}</span>
+      <button 
+        onClick={() => { setIsActive(!isActive); audioService.playClick(); }}
+        className={`w-14 h-8 rounded-full transition-all relative ${isActive ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-slate-800'}`}
+      >
+         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${isActive ? 'right-7' : 'right-1'}`}></div>
+      </button>
+    </div>
+  );
+};
+
+const Loader2 = ({ size, className }: { size: number, className: string }) => (
+  <RefreshCw size={size} className={className} />
 );
 
 export default AdminPanel;
