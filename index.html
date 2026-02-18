@@ -44,7 +44,6 @@
             animation: slideInUp 0.4s ease-out;
         }
         
-        /* Markdown Table Responsive Styling */
         .markdown-container {
             width: 100%;
             overflow-x: auto;
@@ -52,7 +51,7 @@
             margin: 1rem 0;
         }
         .markdown-container table {
-            min-width: 500px; /* ضمان عدم انضغاط الجدول في الهاتف */
+            min-width: 500px;
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
@@ -86,11 +85,18 @@
             background-color: #F8FAFC;
         }
         
-        /* Fix for mobile overflows */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
     </style>
+<script>
+    // Polyfill for process.env used by Gemini SDK in browser
+    window.process = {
+        env: {
+            NODE_ENV: 'production'
+        }
+    };
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -106,5 +112,7 @@
 </head>
 <body class="bg-[#FDFDFF]">
     <div id="root"></div>
+    <!-- الإشارة للملف الأساسي لتشغيل التطبيق -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
