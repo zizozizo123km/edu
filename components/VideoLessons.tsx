@@ -20,11 +20,13 @@ import { geminiService } from '../services/geminiService';
 import { audioService } from '../services/audioService';
 import { TOP_TEACHERS } from '../constants';
 
+// Added source property to interface to fix Error on line 261
 interface VideoResult {
   title: string;
   url: string;
   thumbnail?: string;
   id?: string;
+  source?: string;
 }
 
 const VideoLessons: React.FC = () => {

@@ -371,8 +371,9 @@ const StudyPlan: React.FC<StudyPlanProps> = ({ user }) => {
                   fill="transparent" 
                   strokeDasharray="100" 
                   strokeDashoffset={100 - (100 * timeLeft) / (timerMode === 'work' ? 25 * 60 : 5 * 60)} 
+                  // pathLength moved to prop to fix Error on line 375
+                  pathLength={100}
                   className={`transition-all duration-1000 stroke-linecap-round ${timerMode === 'work' ? 'text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`} 
-                  style={{ pathLength: 100 }}
                 />
               </svg>
               <div className="absolute flex flex-col items-center">
