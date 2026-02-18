@@ -91,10 +91,10 @@ const App: React.FC = () => {
   const handleAuthComplete = (newUser: UserState) => {
     setUser(newUser);
     if (soundEnabled) audioService.playSuccess();
-    // إذا كان المستخدم الجديد هو الأدمن، نتأكد من تفعيل وضع الأدمن فوراً
     if (newUser.rank === 'المشرف العام' || newUser.email === 'nacero1234@gmail.com') {
       setIsAdminMode(true);
       window.history.pushState({}, '', '/admin');
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   };
 
@@ -115,6 +115,7 @@ const App: React.FC = () => {
     setIsSidebarOpen(false);
     if (window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
     setIsAdminMode(false);
     if (soundEnabled) audioService.playClick();
@@ -129,9 +130,8 @@ const App: React.FC = () => {
           onPostUpdate={setPosts} 
           onBroadcast={setAdminBroadcast} 
         />
-        {/* زر العودة للمنصة متاح للأدمن دائماً */}
         <button 
-           onClick={() => { window.history.pushState({}, '', '/'); setIsAdminMode(false); }}
+           onClick={() => { window.history.pushState({}, '', '/'); setIsAdminMode(false); window.dispatchEvent(new PopStateEvent('popstate')); }}
            className="fixed bottom-6 left-6 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 text-xs font-black transition-all z-[1000] backdrop-blur-md"
         >
           الخروج من لوحة التحكم
@@ -191,4 +191,51 @@ const App: React.FC = () => {
             <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-3">القائمة الرئيسية</p>
             <NavItem active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} icon={<Home size={20} />} label="لوحة التحكم" />
             <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan')} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
-            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20}
+            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="غرفة الشعبة" colorClass="blue" />
+            <NavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={20} />} label="ساحة المجتمع" />
+            <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
+            <NavItem active={activeTab === 'summaries'} onClick={() => navigateTo('summaries')} icon={<FileText size={20} />} label="الملخصات" />
+            
+            <div className="pt-8">
+               <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">ميزات حصرية</p>
+               <div className="space-y-2.5 px-1">
+                 <button 
+                   onClick={() => { setShowLiveTutor(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
+                   className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all group"
+                  >
+                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
+                    <Mic size={18} />
+                  </div>
+                  <span className="font-black text-[14px]">الأستاذ المباشر</span>
+                </button>
+                
+                <button 
+                  onClick={() => { setShowAi(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
+                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all group"
+                 >
+                 <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
+                   <BrainCircuit size={18} />
+                 </div>
+                 <span className="font-black text-[14px]">مساعد Dzair AI</span>
+                </button>
+               </div>
+            </div>
+
+            {user.rank === 'المشرف العام' && (
+              <div className="pt-8">
+                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">الإدارة</p>
+                <button 
+                  onClick={() => { window.history.pushState({}, '', '/admin'); setIsAdminMode(true); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-slate-900 text-white shadow-xl hover:scale-[1.02] transition-all group"
+                >
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center ml-3">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <span className="font-black text-[14px]">لوحة التحكم الإدارية</span>
+                </button>
+              </div>
+            )}
+          </nav>
+
+          <div className="mt-6 shrink-0 border-t border-gray-100 pt-6">
+            <div
