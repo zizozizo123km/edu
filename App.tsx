@@ -79,21 +79,19 @@ const NavItem: React.FC<{
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserState | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'contests' | 'summaries' | 'videos' | 'community' | 'profile' | 'studyplan' | 'streamchat' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'summaries' | 'videos' | 'community' | 'profile' | 'studyplan' | 'streamchat'>('dashboard');
   const [showAi, setShowAi] = useState(false);
   const [showLiveTutor, setShowLiveTutor] = useState(false);
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
+  const [isAdminMode, setIsAdminMode] = useState(window.location.pathname === '/admin');
 
   // SPA Routing check for Vercel
   useEffect(() => {
     const handleLocation = () => {
-      const path = window.location.pathname;
-      if (path === '/admin') {
-        setActiveTab('admin');
-      }
+      setIsAdminMode(window.location.pathname === '/admin');
     };
     handleLocation();
     window.addEventListener('popstate', handleLocation);
@@ -108,6 +106,7 @@ const App: React.FC = () => {
   const logout = () => {
     setUser(null);
     window.history.pushState({}, '', '/');
+    setIsAdminMode(false);
   };
 
   const toggleSound = () => {
@@ -119,20 +118,28 @@ const App: React.FC = () => {
   const navigateTo = (tab: any) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
-    if (tab === 'admin') {
-      window.history.pushState({}, '', '/admin');
-    } else {
-      window.history.pushState({}, '', '/');
-    }
+    window.history.pushState({}, '', '/');
+    setIsAdminMode(false);
     if (soundEnabled) audioService.playClick();
   };
+
+  // RENDERING ADMIN PANEL AS A SEPARATE INDEPENDENT PAGE
+  if (isAdminMode) {
+    return (
+      <AdminPanel 
+        user={user || { name: 'المشرف العام', stream: '', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'مشرف' }} 
+        posts={posts} 
+        onPostUpdate={setPosts} 
+        onBroadcast={setAdminBroadcast} 
+      />
+    );
+  }
 
   if (!user) {
     return <Auth onComplete={handleAuthComplete} />;
   }
 
   const isChatTab = activeTab === 'streamchat';
-  const isAdminTab = activeTab === 'admin';
 
   return (
     <div className="h-screen w-screen bg-[#FDFDFF] font-['Cairo',_sans-serif] flex text-right overflow-hidden relative pb-[env(safe-area-inset-bottom)]" dir="rtl">
@@ -140,7 +147,7 @@ const App: React.FC = () => {
       {/* Global Motivational Toast System */}
       <MotivationalToast />
 
-      {/* ADMIN CONTROL: GLOBAL BROADCAST BANNER */}
+      {/* ADMIN CONTROL: GLOBAL BROADCAST BANNER (Visible to all students) */}
       {adminBroadcast && (
         <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
           <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
@@ -189,11 +196,6 @@ const App: React.FC = () => {
             <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
             <NavItem active={activeTab === 'summaries'} onClick={() => navigateTo('summaries')} icon={<FileText size={20} />} label="الملخصات" />
             
-            <div className="pt-8">
-               <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">نظام التحكم</p>
-               <NavItem active={activeTab === 'admin'} onClick={() => navigateTo('admin')} icon={<ShieldAlert size={20} />} label="لوحة الإدارة" colorClass="black" />
-            </div>
-
             <div className="pt-8">
                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">ميزات حصرية</p>
                <div className="space-y-2.5 px-1">
@@ -279,8 +281,8 @@ const App: React.FC = () => {
         </header>
 
         {/* Scrollable Area */}
-        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab || isAdminTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
-          <div className={`h-full ${isChatTab || isAdminTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
+        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
+          <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
             {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
             {activeTab === 'profile' && <Profile user={user} />}
             {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={setPosts} />}
@@ -288,12 +290,11 @@ const App: React.FC = () => {
             {activeTab === 'videos' && <VideoLessons />}
             {activeTab === 'studyplan' && <StudyPlan user={user} />}
             {activeTab === 'streamchat' && <StreamChat user={user} />}
-            {activeTab === 'admin' && <AdminPanel user={user} posts={posts} onPostUpdate={setPosts} onBroadcast={setAdminBroadcast} />}
           </div>
         </main>
 
         {/* Floating Action Buttons */}
-        {!showAi && !showLiveTutor && !isChatTab && !isAdminTab && (
+        {!showAi && !showLiveTutor && !isChatTab && (
           <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
             <button 
               onClick={() => { setShowLiveTutor(true); if(soundEnabled) audioService.playClick(); }}
@@ -316,7 +317,7 @@ const App: React.FC = () => {
           <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
           <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
           <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
-          <button onClick={() => navigateTo('admin')} className={`p-2 ${activeTab === 'admin' ? 'text-gray-900 font-bold' : 'text-gray-400'}`}><ShieldAlert size={24} /></button>
+          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
         </nav>
 
         {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
