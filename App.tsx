@@ -26,7 +26,8 @@ import {
   Sparkles,
   MessageSquare,
   ShieldAlert,
-  Settings
+  Settings,
+  AlertCircle
 } from 'lucide-react';
 import { UserState, Post } from './types';
 import { INITIAL_POSTS } from './constants';
@@ -44,6 +45,40 @@ import StreamChat from './components/StreamChat';
 import AdminPanel from './components/AdminPanel';
 import { audioService } from './services/audioService';
 
+/**
+ * NavItem component for sidebar navigation
+ */
+const NavItem: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  colorClass?: string;
+}> = ({ active, onClick, icon, label, colorClass = 'blue' }) => {
+  const activeClasses = {
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 shadow-sm',
+    red: 'bg-red-50 text-red-600 border-red-200 shadow-sm',
+    black: 'bg-slate-800 text-white border-slate-700 shadow-sm'
+  }[colorClass as 'blue' | 'indigo' | 'red' | 'black'] || 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm';
+
+  const inactiveClasses = colorClass === 'black' 
+    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+    : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600';
+
+  return (
+    <button 
+      onClick={onClick}
+      className={`w-full flex items-center px-4 py-3 rounded-2xl border transition-all duration-200 group ${active ? activeClasses : `border-transparent ${inactiveClasses}`}`}
+    >
+      <div className={`ml-3 transition-transform group-hover:rotate-6 ${active ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`}>
+        {icon}
+      </div>
+      <span className="font-black text-[14px]">{label}</span>
+    </button>
+  );
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<UserState | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'contests' | 'summaries' | 'videos' | 'community' | 'profile' | 'studyplan' | 'streamchat' | 'admin'>('dashboard');
@@ -52,14 +87,14 @@ const App: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
 
+  // Check URL for /admin routing
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    const path = window.location.pathname;
+    if (path.endsWith('/admin')) {
+      setActiveTab('admin');
+    }
   }, []);
 
   const handleAuthComplete = (newUser: UserState) => {
@@ -87,7 +122,6 @@ const App: React.FC = () => {
     return <Auth onComplete={handleAuthComplete} />;
   }
 
-  // Check if current tab is streamchat to remove layout constraints
   const isChatTab = activeTab === 'streamchat';
   const isAdminTab = activeTab === 'admin';
 
@@ -96,6 +130,15 @@ const App: React.FC = () => {
       
       {/* Global Motivational Toast System */}
       <MotivationalToast />
+
+      {/* Admin Broadcast Banner */}
+      {adminBroadcast && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white p-3 text-center font-black text-xs md:text-sm animate-bounce shadow-xl flex items-center justify-center gap-3">
+          <AlertCircle size={18} />
+          {adminBroadcast}
+          <button onClick={() => setAdminBroadcast(null)} className="absolute left-4"><X size={18}/></button>
+        </div>
+      )}
 
       {/* Sidebar Overlay (Mobile) */}
       {isSidebarOpen && (
@@ -229,7 +272,7 @@ const App: React.FC = () => {
             {activeTab === 'videos' && <VideoLessons />}
             {activeTab === 'studyplan' && <StudyPlan user={user} />}
             {activeTab === 'streamchat' && <StreamChat user={user} />}
-            {activeTab === 'admin' && <AdminPanel user={user} posts={posts} onPostUpdate={setPosts} />}
+            {activeTab === 'admin' && <AdminPanel user={user} posts={posts} onPostUpdate={setPosts} onBroadcast={setAdminBroadcast} />}
           </div>
         </main>
 
@@ -252,66 +295,19 @@ const App: React.FC = () => {
         )}
 
         {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white/80 backdrop-blur-xl border-t border-gray-100 px-4 py-2 pb-6 flex items-center justify-between">
-          <BottomNavItem active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} icon={<Home size={22} />} label="الرئيسية" />
-          <BottomNavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={22} />} label="الدردشة" />
-          <div className="w-14 -mt-8 flex items-center justify-center">
-             <button 
-               onClick={() => { setShowAi(true); if(soundEnabled) audioService.playClick(); }}
-               className="w-14 h-14 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200 text-white flex items-center justify-center transform active:scale-90 transition-transform"
-              >
-               <SparklesIcon />
-             </button>
-          </div>
-          <BottomNavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={22} />} label="المجتمع" />
-          <BottomNavItem active={activeTab === 'admin'} onClick={() => navigateTo('admin')} icon={<ShieldAlert size={22} />} label="الإدارة" />
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50">
+          <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
+          <button onClick={() => navigateTo('studyplan')} className={`p-2 ${activeTab === 'studyplan' ? 'text-indigo-600' : 'text-gray-400'}`}><CalendarDays size={24} /></button>
+          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
+          <button onClick={() => navigateTo('summaries')} className={`p-2 ${activeTab === 'summaries' ? 'text-blue-600' : 'text-gray-400'}`}><FileText size={24} /></button>
+          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
         </nav>
+
+        {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
+        {showLiveTutor && <LiveTutor userName={user.name} onClose={() => setShowLiveTutor(false)} />}
       </div>
-
-      {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
-      {showLiveTutor && <LiveTutor userName={user.name} onClose={() => setShowLiveTutor(false)} />}
     </div>
   );
 };
-
-const NavItem = ({ active, onClick, icon, label, colorClass = 'blue' }: any) => {
-  const activeClasses = {
-    blue: 'bg-blue-600 text-white shadow-xl shadow-blue-100',
-    indigo: 'bg-indigo-600 text-white shadow-xl shadow-indigo-100',
-    red: 'bg-red-600 text-white shadow-xl shadow-red-100',
-    black: 'bg-gray-900 text-white shadow-xl shadow-gray-900'
-  };
-  const hoverClasses = {
-    blue: 'hover:bg-blue-50 hover:text-blue-600',
-    indigo: 'hover:bg-indigo-50 hover:text-indigo-600',
-    red: 'hover:bg-red-50 hover:text-red-600',
-    black: 'hover:bg-gray-100 hover:text-gray-900'
-  };
-  
-  return (
-    <button 
-      onClick={onClick} 
-      className={`w-full flex items-center px-4 py-3 rounded-2xl transition-all duration-300 ${active ? activeClasses[colorClass as keyof typeof activeClasses] : `text-gray-400 ${hoverClasses[colorClass as keyof typeof hoverClasses]}`}`}
-    >
-      <span className="ml-3 shrink-0">{icon}</span>
-      <span className="font-black text-[14px]">{label}</span>
-    </button>
-  );
-};
-
-const BottomNavItem = ({ active, onClick, icon, label }: any) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 flex-1 py-1 transition-all ${active ? 'text-blue-600' : 'text-gray-400'}`}>
-    <div className={`transition-transform duration-300 ${active ? 'scale-110 -translate-y-0.5' : ''}`}>
-      {icon}
-    </div>
-    <span className="text-[9px] font-black">{label}</span>
-  </button>
-);
-
-const SparklesIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 3L14.5 9L21 11.5L14.5 14L12 21L9.5 14L3 11.5L9.5 9L12 3Z" fill="white" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
 
 export default App;
