@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DzairEdu Pro - منصة التفوق للبكالوريا</title>
+    <title>DzairEdu Pro - مركز التحكم</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -44,47 +44,6 @@
             animation: slideInUp 0.4s ease-out;
         }
         
-        .markdown-container {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin: 1rem 0;
-        }
-        .markdown-container table {
-            min-width: 500px;
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            border-radius: 1rem;
-            overflow: hidden;
-            border: 1px solid #F1F5F9;
-        }
-        @media (min-width: 768px) {
-            .markdown-container table {
-                border-radius: 1.5rem;
-                min-width: 100%;
-            }
-        }
-        .markdown-container th {
-            background-color: #2563EB;
-            color: white;
-            font-weight: 800;
-            padding: 0.75rem;
-            text-align: right;
-            font-size: 0.75rem;
-        }
-        .markdown-container td {
-            background-color: white;
-            padding: 0.75rem;
-            border-bottom: 1px solid #F1F5F9;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #1E293B;
-        }
-        .markdown-container tr:nth-child(even) td {
-            background-color: #F8FAFC;
-        }
-        
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -112,7 +71,7 @@
 </head>
 <body class="bg-[#FDFDFF]">
     <div id="root"></div>
-    <!-- الإشارة للملف الأساسي لتشغيل التطبيق -->
-    <script type="module" src="index.tsx"></script>
+    <!-- استخدام المسار المطلق /index.tsx لحل مشكلة الشاشة البيضاء في الروابط الفرعية -->
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

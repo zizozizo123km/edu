@@ -1,14 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Layout, 
-  BookOpen, 
-  Award, 
-  BrainCircuit, 
-  Search, 
-  Bell, 
-  Flame, 
-  LogOut, 
   Globe, 
   Home,
   Menu,
@@ -19,15 +11,14 @@ import {
   Volume2,
   VolumeX,
   Users,
-  Maximize,
-  Minimize,
   UserCircle,
   CalendarDays,
-  Sparkles,
   MessageSquare,
-  ShieldAlert,
-  Settings,
-  AlertCircle,
+  Search,
+  Bell,
+  Flame,
+  LogOut,
+  BrainCircuit,
   ShieldCheck
 } from 'lucide-react';
 import { UserState, Post } from './types';
@@ -86,16 +77,17 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
-  const [isAdminMode, setIsAdminMode] = useState(window.location.pathname === '/admin');
+  const [isAdminMode, setIsAdminMode] = useState(window.location.pathname.startsWith('/admin'));
 
-  // SPA Routing check for Vercel
+  // Routing synchronization
   useEffect(() => {
-    const handleLocation = () => {
-      setIsAdminMode(window.location.pathname === '/admin');
+    const handleLocationChange = () => {
+      setIsAdminMode(window.location.pathname.startsWith('/admin'));
     };
-    handleLocation();
-    window.addEventListener('popstate', handleLocation);
-    return () => window.removeEventListener('popstate', handleLocation);
+    window.addEventListener('popstate', handleLocationChange);
+    // Trigger initially
+    handleLocationChange();
+    return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
   const handleAuthComplete = (newUser: UserState) => {
@@ -118,23 +110,28 @@ const App: React.FC = () => {
   const navigateTo = (tab: any) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
-    window.history.pushState({}, '', '/');
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
     setIsAdminMode(false);
     if (soundEnabled) audioService.playClick();
   };
 
-  // RENDERING ADMIN PANEL AS A SEPARATE INDEPENDENT PAGE
+  // 1. ADMIN MODE CHECK - FULL OVERLAY (NO STUDENT WRAPPER)
   if (isAdminMode) {
     return (
-      <AdminPanel 
-        user={user || { name: 'المشرف العام', stream: '', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'مشرف' }} 
-        posts={posts} 
-        onPostUpdate={setPosts} 
-        onBroadcast={setAdminBroadcast} 
-      />
+      <div className="h-screen w-screen bg-[#020617] overflow-hidden" dir="rtl">
+        <AdminPanel 
+          user={user || { name: 'المشرف العام', stream: '', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'مشرف' }} 
+          posts={posts} 
+          onPostUpdate={setPosts} 
+          onBroadcast={setAdminBroadcast} 
+        />
+      </div>
     );
   }
 
+  // 2. AUTH CHECK
   if (!user) {
     return <Auth onComplete={handleAuthComplete} />;
   }
@@ -143,11 +140,9 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-[#FDFDFF] font-['Cairo',_sans-serif] flex text-right overflow-hidden relative pb-[env(safe-area-inset-bottom)]" dir="rtl">
-      
-      {/* Global Motivational Toast System */}
       <MotivationalToast />
 
-      {/* ADMIN CONTROL: GLOBAL BROADCAST BANNER (Visible to all students) */}
+      {/* ADMIN BROADCAST BANNER */}
       {adminBroadcast && (
         <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
           <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
@@ -240,9 +235,8 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header */}
         <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-gray-100 px-4 md:px-8 py-3.5 md:py-5 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-gray-50 rounded-xl text-gray-500 hover:bg-gray-100 transition-all"><Menu size={22} /></button>
@@ -280,7 +274,6 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Scrollable Area */}
         <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
           <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
             {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
@@ -293,7 +286,6 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        {/* Floating Action Buttons */}
         {!showAi && !showLiveTutor && !isChatTab && (
           <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
             <button 
@@ -311,7 +303,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Mobile Bottom Navigation */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
           <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
           <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
