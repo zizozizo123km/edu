@@ -21,21 +21,21 @@ import {
   BrainCircuit,
   ShieldCheck
 } from 'lucide-react';
-import { UserState, Post } from '/types.ts';
-import { INITIAL_POSTS } from '/constants.tsx';
-import Auth from '/components/Auth.tsx';
-import Dashboard from '/components/Dashboard.tsx';
-import AiAssistant from '/components/AiAssistant.tsx';
-import Summaries from '/components/Summaries.tsx';
-import VideoLessons from '/components/VideoLessons.tsx';
-import LiveTutor from '/components/LiveTutor.tsx';
-import Community from '/components/Community.tsx';
-import Profile from '/components/Profile.tsx';
-import StudyPlan from '/components/StudyPlan.tsx';
-import MotivationalToast from '/components/MotivationalToast.tsx';
-import StreamChat from '/components/StreamChat.tsx';
-import AdminPanel from '/components/AdminPanel.tsx';
-import { audioService } from '/services/audioService.ts';
+import { UserState, Post } from './types.ts';
+import { INITIAL_POSTS } from './constants.tsx';
+import Auth from './components/Auth.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import AiAssistant from './components/AiAssistant.tsx';
+import Summaries from './components/Summaries.tsx';
+import VideoLessons from './components/VideoLessons.tsx';
+import LiveTutor from './components/LiveTutor.tsx';
+import Community from './components/Community.tsx';
+import Profile from './components/Profile.tsx';
+import StudyPlan from './components/StudyPlan.tsx';
+import MotivationalToast from './components/MotivationalToast.tsx';
+import StreamChat from './components/StreamChat.tsx';
+import AdminPanel from './components/AdminPanel.tsx';
+import { audioService } from './services/audioService.ts';
 
 const NavItem: React.FC<{
   active: boolean;

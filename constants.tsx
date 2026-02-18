@@ -1,5 +1,5 @@
 
-import { StreamType, Subject, Post, Summary } from '/types.ts';
+import { StreamType, Subject, Post, Summary } from './types.ts';
 
 export interface TeacherChannel {
   id: string;
