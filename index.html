@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DzairEdu Pro - منصة التفوق للبكالوريا</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+          --sat: env(safe-area-inset-top);
+          --sar: env(safe-area-inset-right);
+          --sab: env(safe-area-inset-bottom);
+          --sal: env(safe-area-inset-left);
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #FDFDFF;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #root {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E2E8F0;
+            border-radius: 10px;
+        }
+        @keyframes slideInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideInUp 0.4s ease-out;
+        }
+        
+        /* Markdown Table Responsive Styling */
+        .markdown-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1rem 0;
+        }
+        .markdown-container table {
+            min-width: 500px; /* ضمان عدم انضغاط الجدول في الهاتف */
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #F1F5F9;
+        }
+        @media (min-width: 768px) {
+            .markdown-container table {
+                border-radius: 1.5rem;
+                min-width: 100%;
+            }
+        }
+        .markdown-container th {
+            background-color: #2563EB;
+            color: white;
+            font-weight: 800;
+            padding: 0.75rem;
+            text-align: right;
+            font-size: 0.75rem;
+        }
+        .markdown-container td {
+            background-color: white;
+            padding: 0.75rem;
+            border-bottom: 1px solid #F1F5F9;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1E293B;
+        }
+        .markdown-container tr:nth-child(even) td {
+            background-color: #F8FAFC;
+        }
+        
+        /* Fix for mobile overflows */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.574.0",
+    "marked": "https://esm.sh/marked@^15.0.0"
+  }
+}
+</script>
+</head>
+<body class="bg-[#FDFDFF]">
+    <div id="root"></div>
+</body>
+</html>

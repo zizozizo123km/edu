@@ -1,0 +1,7 @@
+{
+  "name": "DzairEdu Pro",
+  "description": "A comprehensive educational platform for Algerian Baccalaureate students featuring AI-powered tutoring, community sharing, and progress tracking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
