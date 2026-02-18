@@ -49,6 +49,7 @@ export interface StreamMessage {
 
 export interface UserState {
   name: string;
+  email?: string;
   stream: StreamType | '';
   xp: number;
   streak: number;

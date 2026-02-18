@@ -91,6 +91,10 @@ const App: React.FC = () => {
   const handleAuthComplete = (newUser: UserState) => {
     setUser(newUser);
     if (soundEnabled) audioService.playSuccess();
+    // إذا كان المستخدم الجديد هو الأدمن، نتأكد من تفعيل وضع الأدمن فوراً
+    if (newUser.rank === 'المشرف العام') {
+      setIsAdminMode(true);
+    }
   };
 
   const logout = () => {
@@ -119,11 +123,18 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-[#020617] overflow-hidden" dir="rtl">
         <AdminPanel 
-          user={user || { name: 'المشرف العام', stream: '', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'مشرف' }} 
+          user={user || { name: 'المشرف العام', stream: '', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'المشرف العام' }} 
           posts={posts} 
           onPostUpdate={setPosts} 
           onBroadcast={setAdminBroadcast} 
         />
+        {/* زر العودة للمنصة متاح للأدمن دائماً */}
+        <button 
+           onClick={() => { window.history.pushState({}, '', '/'); setIsAdminMode(false); }}
+           className="fixed bottom-6 left-6 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 text-xs font-black transition-all z-[1000] backdrop-blur-md"
+        >
+          الخروج من لوحة التحكم
+        </button>
       </div>
     );
   }
@@ -181,7 +192,7 @@ const App: React.FC = () => {
             <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan')} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
             <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="غرفة الشعبة" colorClass="blue" />
             <NavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={20} />} label="ساحة المجتمع" />
-            <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
+            <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos'} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
             <NavItem active={activeTab === 'summaries'} onClick={() => navigateTo('summaries')} icon={<FileText size={20} />} label="الملخصات" />
             
             <div className="pt-8">
@@ -208,6 +219,21 @@ const App: React.FC = () => {
                 </button>
                </div>
             </div>
+
+            {user.rank === 'المشرف العام' && (
+              <div className="pt-8">
+                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">الإدارة</p>
+                <button 
+                  onClick={() => { window.history.pushState({}, '', '/admin'); setIsAdminMode(true); }}
+                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-slate-900 text-white shadow-xl hover:scale-[1.02] transition-all group"
+                >
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center ml-3">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <span className="font-black text-[14px]">لوحة التحكم الإدارية</span>
+                </button>
+              </div>
+            )}
           </nav>
 
           <div className="mt-6 shrink-0 border-t border-gray-100 pt-6">
@@ -220,7 +246,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-[13px] font-black text-gray-800 truncate leading-none mb-1">{user.name}</p>
-                <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest">{user.stream}</p>
+                <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest">{user.rank}</p>
               </div>
               <button onClick={(e) => { e.stopPropagation(); logout(); }} className="text-gray-300 hover:text-red-500 transition-colors p-2 shrink-0"><LogOut size={18} /></button>
             </div>
@@ -241,7 +267,7 @@ const App: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="ابحث عن دروس، ملخصات، أو تمارين البكالوريا..." 
-                className="w-full pr-12 pl-6 py-2.5 bg-gray-50/80 border border-transparent focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-[14px] outline-none font-bold transition-all shadow-inner" 
+                className="w-full pr-12 pl-6 py-2.5 bg-gray-50/80 border border-transparent focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-[14px] outline-none font-bold transition-all shadow-inner text-right" 
               />
             </div>
           </div>
