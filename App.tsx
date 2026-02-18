@@ -21,21 +21,21 @@ import {
   BrainCircuit,
   ShieldCheck
 } from 'lucide-react';
-import { UserState, Post } from './types';
-import { INITIAL_POSTS } from './constants';
-import Auth from './components/Auth';
-import Dashboard from './components/Dashboard';
-import AiAssistant from './components/AiAssistant';
-import Summaries from './components/Summaries';
-import VideoLessons from './components/VideoLessons';
-import LiveTutor from './components/LiveTutor';
-import Community from './components/Community';
-import Profile from './components/Profile';
-import StudyPlan from './components/StudyPlan';
-import MotivationalToast from './components/MotivationalToast';
-import StreamChat from './components/StreamChat';
-import AdminPanel from './components/AdminPanel';
-import { audioService } from './services/audioService';
+import { UserState, Post } from './types.ts';
+import { INITIAL_POSTS } from './constants.tsx';
+import Auth from './components/Auth.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import AiAssistant from './components/AiAssistant.tsx';
+import Summaries from './components/Summaries.tsx';
+import VideoLessons from './components/VideoLessons.tsx';
+import LiveTutor from './components/LiveTutor.tsx';
+import Community from './components/Community.tsx';
+import Profile from './components/Profile.tsx';
+import StudyPlan from './components/StudyPlan.tsx';
+import MotivationalToast from './components/MotivationalToast.tsx';
+import StreamChat from './components/StreamChat.tsx';
+import AdminPanel from './components/AdminPanel.tsx';
+import { audioService } from './services/audioService.ts';
 
 const NavItem: React.FC<{
   active: boolean;
@@ -79,13 +79,11 @@ const App: React.FC = () => {
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(window.location.pathname.startsWith('/admin'));
 
-  // Routing synchronization
   useEffect(() => {
     const handleLocationChange = () => {
       setIsAdminMode(window.location.pathname.startsWith('/admin'));
     };
     window.addEventListener('popstate', handleLocationChange);
-    // Trigger initially
     handleLocationChange();
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
@@ -117,7 +115,6 @@ const App: React.FC = () => {
     if (soundEnabled) audioService.playClick();
   };
 
-  // 1. ADMIN MODE CHECK - FULL OVERLAY (NO STUDENT WRAPPER)
   if (isAdminMode) {
     return (
       <div className="h-screen w-screen bg-[#020617] overflow-hidden" dir="rtl">
@@ -131,7 +128,6 @@ const App: React.FC = () => {
     );
   }
 
-  // 2. AUTH CHECK
   if (!user) {
     return <Auth onComplete={handleAuthComplete} />;
   }
@@ -142,7 +138,6 @@ const App: React.FC = () => {
     <div className="h-screen w-screen bg-[#FDFDFF] font-['Cairo',_sans-serif] flex text-right overflow-hidden relative pb-[env(safe-area-inset-bottom)]" dir="rtl">
       <MotivationalToast />
 
-      {/* ADMIN BROADCAST BANNER */}
       {adminBroadcast && (
         <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
           <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
@@ -158,7 +153,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar Overlay (Mobile) */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
@@ -166,7 +160,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Sidebar - Desktop */}
       <aside className={`
         fixed inset-y-0 right-0 z-50 w-72 md:w-80 bg-white border-l border-gray-100 flex flex-col transition-transform duration-300 transform
         lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full lg:translate-x-0'}
@@ -235,7 +228,6 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-gray-100 px-4 md:px-8 py-3.5 md:py-5 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -262,60 +254,4 @@ const App: React.FC = () => {
 
             <button 
               onClick={toggleSound}
-              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-white border-gray-100 text-gray-400'}`}
-            >
-              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
-            
-            <button className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 relative hover:text-blue-600 transition-all group">
-               <Bell size={20} />
-               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></span>
-            </button>
-          </div>
-        </header>
-
-        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
-          <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
-            {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
-            {activeTab === 'profile' && <Profile user={user} />}
-            {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={setPosts} />}
-            {activeTab === 'summaries' && <Summaries user={user} soundEnabled={soundEnabled} />}
-            {activeTab === 'videos' && <VideoLessons />}
-            {activeTab === 'studyplan' && <StudyPlan user={user} />}
-            {activeTab === 'streamchat' && <StreamChat user={user} />}
-          </div>
-        </main>
-
-        {!showAi && !showLiveTutor && !isChatTab && (
-          <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
-            <button 
-              onClick={() => { setShowLiveTutor(true); if(soundEnabled) audioService.playClick(); }}
-              className="bg-indigo-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
-            >
-              <Mic size={24} className="md:w-8 md:h-8" />
-            </button>
-            <button 
-              onClick={() => { setShowAi(true); if(soundEnabled) audioService.playClick(); }}
-              className="bg-blue-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
-            >
-              <BrainCircuit size={24} className="md:w-8 md:h-8" />
-            </button>
-          </div>
-        )}
-
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
-          <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
-          <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
-          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
-          <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
-          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
-        </nav>
-
-        {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
-        {showLiveTutor && <LiveTutor userName={user.name} onClose={() => setShowLiveTutor(false)} />}
-      </div>
-    </div>
-  );
-};
-
-export default App;
+              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100
