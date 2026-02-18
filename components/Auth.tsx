@@ -16,7 +16,8 @@ import {
   Eye,
   EyeOff,
   Smartphone,
-  Fingerprint
+  Fingerprint,
+  Terminal
 } from 'lucide-react';
 import { StreamType, UserState } from '../types';
 import { STREAM_SUBJECTS } from '../constants';
@@ -73,25 +74,32 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
     return true;
   };
 
+  const handleAdminQuickLogin = () => {
+    setIsLoading(true);
+    audioService.playSuccess();
+    setTimeout(() => {
+      window.history.pushState({}, '', '/admin');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      onComplete({
+        name: 'المشرف العام',
+        email: 'nacero1234@gmail.com',
+        stream: 'علوم تجريبية',
+        xp: 99999,
+        streak: 365,
+        avatarSeed: 'admin-nacer',
+        joinDate: new Date().toISOString(),
+        rank: 'المشرف العام'
+      });
+    }, 800);
+  };
+
   const onLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateLogin()) {
       setIsLoading(true);
       setTimeout(() => {
         if (formData.email === 'nacero1234@gmail.com' && formData.password === 'adminadmin') {
-          audioService.playSuccess();
-          window.history.pushState({}, '', '/admin');
-          window.dispatchEvent(new PopStateEvent('popstate'));
-          onComplete({
-            name: 'المشرف العام',
-            email: formData.email,
-            stream: '',
-            xp: 99999,
-            streak: 365,
-            avatarSeed: 'admin-nacer',
-            joinDate: new Date().toISOString(),
-            rank: 'المشرف العام'
-          });
+          handleAdminQuickLogin();
           return;
         }
         audioService.playSuccess();
@@ -141,7 +149,7 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
       <div className="max-w-5xl w-full relative z-10">
         {view !== 'stream' ? (
           <div className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl border border-white/50 overflow-hidden flex flex-col md:flex-row min-h-[650px] animate-in fade-in zoom-in duration-500">
-            {/* Left Side: Illustration & Branding - Hidden on mobile or scrollable */}
+            {/* Left Side: Illustration & Branding */}
             <div className="w-full md:w-[45%] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-10 md:p-16 text-white flex flex-col justify-between relative overflow-hidden">
               <div className="relative z-10">
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mb-8 border border-white/20 shadow-2xl transition-transform hover:rotate-12">
@@ -331,6 +339,16 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
                   </button>
                 </div>
               </form>
+
+              {/* Admin Access Footer */}
+              <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col items-center">
+                 <button 
+                    onClick={handleAdminQuickLogin}
+                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl hover:text-white hover:bg-black transition-all text-[10px] font-black uppercase tracking-widest border border-white/5"
+                 >
+                    <ShieldCheck size={14} className="text-emerald-500" /> دخول المشرف (Admin)
+                 </button>
+              </div>
             </div>
           </div>
         ) : (
