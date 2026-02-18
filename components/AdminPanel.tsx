@@ -183,7 +183,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, posts, onPostUpdate, onBr
               <div className="space-y-3">
                 {logs.map((log, i) => (
                   <div key={i} className="text-[10px] md:text-xs font-mono p-3 bg-black/40 rounded-xl border border-white/5 text-slate-400 animate-in fade-in slide-in-from-right duration-300">
-                    <span className="text-emerald-500/50 ml-2">></span> {log}
+                    <span className="text-emerald-500/50 ml-2">&gt;</span> {log}
                   </div>
                 ))}
               </div>
