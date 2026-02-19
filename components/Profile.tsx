@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   User, 
   Settings, 
@@ -13,62 +13,17 @@ import {
   BookOpen,
   ChevronLeft,
   GraduationCap,
-  Sparkles,
-  Camera,
-  Check,
-  X,
-  Loader2,
-  RefreshCw
+  Sparkles
 } from 'lucide-react';
-import { UserState, StreamType } from '../types';
+import { UserState } from '../types';
 import { STREAM_SUBJECTS } from '../constants';
-import { db, auth } from '../services/firebaseService';
-import { ref, update } from "https://esm.sh/firebase@10.8.0/database";
-import { audioService } from '../services/audioService';
 
 interface ProfileProps {
   user: UserState;
 }
 
 const Profile: React.FC<ProfileProps> = ({ user }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: user.name,
-    stream: user.stream,
-    avatarSeed: user.avatarSeed
-  });
-
   const currentSubjects = STREAM_SUBJECTS[user.stream] || [];
-
-  const handleUpdateProfile = async () => {
-    setIsSaving(true);
-    audioService.playClick();
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const userRef = ref(db, `users/${currentUser.uid}`);
-        await update(userRef, {
-          name: editForm.name,
-          stream: editForm.stream,
-          avatarSeed: editForm.avatarSeed
-        });
-        setIsEditing(false);
-        audioService.playSuccess();
-      }
-    } catch (err) {
-      console.error(err);
-      alert("حدث خطأ أثناء حفظ البيانات");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const regenerateAvatar = () => {
-    const newSeed = Math.random().toString(36).substring(7);
-    setEditForm({ ...editForm, avatarSeed: newSeed });
-    audioService.playClick();
-  };
 
   const achievements = [
     { title: 'طالب مثابر', desc: 'إكمال 3 أيام متتالية', icon: <Flame size={20} />, color: 'bg-orange-100 text-orange-600' },
@@ -78,99 +33,45 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
   ];
 
   return (
-    <div className="space-y-10 animate-slide-up pb-24 text-right" dir="rtl">
+    <div className="space-y-10 animate-slide-up pb-24">
       {/* Profile Header Hero */}
       <div className="relative bg-white rounded-[3.5rem] p-10 lg:p-14 border border-gray-100 shadow-xl overflow-hidden group">
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
           <div className="relative">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-[3rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-5xl md:text-7xl shadow-2xl border-4 border-white overflow-hidden group/avatar">
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${isEditing ? editForm.avatarSeed : user.avatarSeed}`} className="w-full h-full object-cover" />
-              {isEditing && (
-                <button 
-                  onClick={regenerateAvatar}
-                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity"
-                >
-                  <RefreshCw size={32} className="text-white" />
-                </button>
-              )}
+            <div className="w-32 h-32 md:w-48 md:h-48 rounded-[3rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-5xl md:text-7xl shadow-2xl border-4 border-white">
+              {user.name.charAt(0)}
             </div>
-            {!isEditing && (
-              <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-emerald-500 rounded-2xl border-4 border-white flex items-center justify-center text-white shadow-lg animate-bounce-slow">
-                <ShieldCheck size={24} />
-              </div>
-            )}
+            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-emerald-500 rounded-2xl border-4 border-white flex items-center justify-center text-white shadow-lg animate-bounce-slow">
+              <ShieldCheck size={24} />
+            </div>
           </div>
           
-          <div className="flex-1 text-center md:text-right w-full">
-            {isEditing ? (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">الاسم الكامل</label>
-                  <input 
-                    type="text" 
-                    className="w-full md:w-80 px-6 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-black text-gray-800"
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">الشعبة الدراسية</label>
-                  <select 
-                    className="w-full md:w-80 px-6 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-black text-gray-800 appearance-none"
-                    value={editForm.stream}
-                    onChange={(e) => setEditForm({ ...editForm, stream: e.target.value as StreamType })}
-                  >
-                    {Object.keys(STREAM_SUBJECTS).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-6">
-                  <button 
-                    onClick={handleUpdateProfile}
-                    disabled={isSaving}
-                    className="bg-emerald-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl flex items-center gap-2 hover:bg-emerald-700 active:scale-95 transition-all"
-                  >
-                    {isSaving ? <Loader2 className="animate-spin" /> : <><Check size={18} /> حفظ التغييرات</>}
-                  </button>
-                  <button 
-                    onClick={() => { setIsEditing(false); setEditForm({ name: user.name, stream: user.stream, avatarSeed: user.avatarSeed }); }}
-                    className="bg-gray-100 text-gray-500 px-8 py-3.5 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all"
-                  >
-                    إلغاء
-                  </button>
-                </div>
+          <div className="flex-1 text-center md:text-right">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4 justify-center md:justify-start">
+              <h1 className="text-4xl font-black text-gray-800">{user.name}</h1>
+              <span className="px-5 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-black border border-blue-100 shadow-sm">
+                {user.rank}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-gray-500 font-bold mb-8">
+              <div className="flex items-center gap-2">
+                <GraduationCap size={18} className="text-blue-500" />
+                <span>شعبة {user.stream}</span>
               </div>
-            ) : (
-              <div className="animate-in fade-in duration-500">
-                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4 justify-center md:justify-start">
-                  <h1 className="text-4xl font-black text-gray-800">{user.name}</h1>
-                  <span className="px-5 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-black border border-blue-100 shadow-sm">
-                    {user.rank}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-gray-500 font-bold mb-8">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap size={18} className="text-blue-500" />
-                    <span>شعبة {user.stream}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-blue-500" />
-                    <span>انضم في {new Date(user.joinDate).toLocaleDateString('ar-DZ', { month: 'long', year: 'numeric' })}</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                  <button 
-                    onClick={() => { setIsEditing(true); audioService.playClick(); }}
-                    className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-2"
-                  >
-                    تعديل الملف <Settings size={18} />
-                  </button>
-                  <button className="bg-gray-50 text-gray-600 px-8 py-3.5 rounded-2xl font-black text-sm border border-gray-100 hover:bg-gray-100 transition-all">
-                    مشاركة الرابط
-                  </button>
-                </div>
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-blue-500" />
+                <span>انضم في {new Date(user.joinDate).toLocaleDateString('ar-DZ', { month: 'long', year: 'numeric' })}</span>
               </div>
-            )}
+            </div>
+            
+            <div className="flex flex-wrap justify-center md:justify-start gap-4">
+              <button className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-2">
+                تعديل الملف <Settings size={18} />
+              </button>
+              <button className="bg-gray-50 text-gray-600 px-8 py-3.5 rounded-2xl font-black text-sm border border-gray-100 hover:bg-gray-100 transition-all">
+                مشاركة الرابط
+              </button>
+            </div>
           </div>
           
           <div className="hidden lg:grid grid-cols-2 gap-4">
