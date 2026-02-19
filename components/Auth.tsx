@@ -11,8 +11,8 @@ import { auth, db } from '../services/firebaseService';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword 
-} from "https://esm.sh/firebase@10.8.0/auth";
-import { ref, set } from "https://esm.sh/firebase@10.8.0/database";
+} from "firebase/auth";
+import { ref, set } from "firebase/database";
 
 interface AuthProps {
   onComplete: (user: UserState) => void;

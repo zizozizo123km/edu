@@ -1,7 +1,7 @@
 
-import { initializeApp } from "https://esm.sh/firebase@10.8.0/app";
-import { getAuth } from "https://esm.sh/firebase@10.8.0/auth";
-import { getDatabase } from "https://esm.sh/firebase@10.8.0/database";
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAXhNaaab-qlON1aY9XLBcjaJfHR50u2uA",

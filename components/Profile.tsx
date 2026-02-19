@@ -8,7 +8,7 @@ import {
 import { UserState, StreamType } from '../types';
 import { STREAM_SUBJECTS } from '../constants';
 import { db, auth } from '../services/firebaseService';
-import { ref, update } from "https://esm.sh/firebase@10.8.0/database";
+import { ref, update } from "firebase/database";
 import { audioService } from '../services/audioService';
 
 interface ProfileProps {

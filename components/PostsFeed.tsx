@@ -7,7 +7,7 @@ import {
 import { Post, UserState, PostComment } from '../types';
 import { audioService } from '../services/audioService';
 import { db, auth } from '../services/firebaseService';
-import { ref, push, update, remove, serverTimestamp } from "https://esm.sh/firebase@10.8.0/database";
+import { ref, push, update, remove, serverTimestamp } from "firebase/database";
 
 interface PostsFeedProps {
   user: UserState;

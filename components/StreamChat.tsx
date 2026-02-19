@@ -4,7 +4,7 @@ import { Send, Users, ShieldCheck, Hash, MoreVertical } from 'lucide-react';
 import { StreamMessage, UserState } from '../types';
 import { audioService } from '../services/audioService';
 import { db, auth } from '../services/firebaseService';
-import { ref, push, onValue, off, serverTimestamp } from "https://esm.sh/firebase@10.8.0/database";
+import { ref, push, onValue, off, serverTimestamp } from "firebase/database";
 
 interface StreamChatProps {
   user: UserState;

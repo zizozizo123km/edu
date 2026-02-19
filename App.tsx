@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { UserState, Post } from './types.ts';
 import { auth, db } from './services/firebaseService';
-import { onAuthStateChanged, signOut } from "https://esm.sh/firebase@10.8.0/auth";
-import { ref, onValue, off } from "https://esm.sh/firebase@10.8.0/database";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { ref, onValue, off } from "firebase/database";
 
 import Auth from './components/Auth.tsx';
 import Dashboard from './components/Dashboard.tsx';
@@ -21,7 +21,6 @@ import Profile from './components/Profile.tsx';
 import StudyPlan from './components/StudyPlan.tsx';
 import MotivationalToast from './components/MotivationalToast.tsx';
 import StreamChat from './components/StreamChat.tsx';
-import AdminPanel from './components/AdminPanel.tsx';
 import { audioService } from './services/audioService.ts';
 
 const NavItem: React.FC<{
@@ -58,7 +57,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
-  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -122,7 +120,7 @@ const App: React.FC = () => {
 
           <nav className="space-y-1.5 flex-1">
             <NavItem active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} icon={<Home size={20} />} label="لوحة التحكم" />
-            <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan')} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
+            <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan'} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
             <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="دردشة الشعبة" colorClass="blue" badge="HOT" />
             <NavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={20} />} label="ساحة المجتمع" />
             <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
