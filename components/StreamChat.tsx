@@ -1,10 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Hash, MoreVertical, Loader2 } from 'lucide-react';
+import { Send, Users, ShieldCheck, Sparkles, MessageCircle, MoreVertical, Hash, Info, UserCheck } from 'lucide-react';
 import { StreamMessage, UserState } from '../types';
 import { audioService } from '../services/audioService';
-import { db, auth } from '../services/firebaseService';
-import { ref, push, onValue, limitToLast, query, serverTimestamp } from 'firebase/database';
 
 interface StreamChatProps {
   user: UserState;
@@ -13,132 +11,181 @@ interface StreamChatProps {
 const StreamChat: React.FC<StreamChatProps> = ({ user }) => {
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // محاكاة رسائل ابتدائية حسب الشعبة
   useEffect(() => {
-    if (!user.stream) return;
-    
-    // تنظيف اسم الشعبة ليكون مساراً صالحاً في قاعدة البيانات
-    const streamPath = user.stream.replace(/\s+/g, '_');
-    const chatRef = query(ref(db, `chats/${streamPath}`), limitToLast(100));
-
-    const unsubscribe = onValue(chatRef, (snapshot) => {
-      setIsLoading(false);
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const msgList = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key,
-          isMe: data[key].senderUid === auth.currentUser?.uid
-        }));
-        setMessages(msgList);
-      } else {
-        setMessages([]);
+    const initialMessages: StreamMessage[] = [
+      {
+        id: '1',
+        sender: 'ياسين',
+        content: `أهلاً يا جماعة الخير! واش أحوالكم مع مراجعة ${user.stream === 'علوم تجريبية' ? 'العلوم الطبيعية' : 'الرياضيات'}؟`,
+        timestamp: '10:30 ص',
+        isMe: false,
+        avatarSeed: 'yassine'
+      },
+      {
+        id: '2',
+        sender: 'فطيمة',
+        content: 'راني حاصلة شوية في الوحدة الثانية، كاش ملخصات ملاح؟',
+        timestamp: '10:32 ص',
+        isMe: false,
+        avatarSeed: 'fatima'
+      },
+      {
+        id: '3',
+        sender: 'أمين',
+        content: 'عندي ملخص روعة درك نبعثولكم في ساحة المجتمع، ركزو برك على المنهجية.',
+        timestamp: '10:35 ص',
+        isMe: false,
+        avatarSeed: 'amine'
       }
-    });
-
-    return () => unsubscribe();
+    ];
+    setMessages(initialMessages);
   }, [user.stream]);
 
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || !auth.currentUser) return;
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
 
-    const streamPath = user.stream.replace(/\s+/g, '_');
-    const chatRef = ref(db, `chats/${streamPath}`);
-
-    const newMessage = {
+    const newMessage: StreamMessage = {
+      id: Date.now().toString(),
       sender: user.name,
-      senderUid: auth.currentUser.uid,
       content: inputValue,
       timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
-      createdAt: serverTimestamp(),
-      avatarSeed: user.avatarSeed || user.name
+      isMe: true,
+      avatarSeed: user.avatarSeed
     };
 
-    try {
-      setInputValue(''); // تفريغ الحقل فوراً لتجربة مستخدم أفضل
-      await push(chatRef, newMessage);
-      audioService.playClick();
-    } catch (err) {
-      console.error("Chat push failed", err);
-    }
+    setMessages(prev => [...prev, newMessage]);
+    setInputValue('');
+    audioService.playClick();
+
+    // محاكاة رد سريع
+    setTimeout(() => {
+      const replies = [
+        "شكراً على المعلومة!",
+        "ربي يوفقنا كامل إن شاء الله.",
+        "واش رايكم نديرو تحدي حل تمارين الليلة؟",
+        "المنهجية هي كلش في هذي المادة."
+      ];
+      const randomReply = replies[Math.floor(Math.random() * replies.length)];
+      
+      const reply: StreamMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'كمال',
+        content: randomReply,
+        timestamp: new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' }),
+        isMe: false,
+        avatarSeed: 'kamal'
+      };
+      setMessages(prev => [...prev, reply]);
+    }, 2000);
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-white overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm">
-      <div className="px-6 py-5 bg-blue-600 text-white flex items-center justify-between shrink-0 shadow-lg">
+    <div className="flex flex-col h-full w-full bg-white overflow-hidden animate-slide-up">
+      {/* Chat Header - Fixed at Top */}
+      <div className="px-6 md:px-10 py-5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 text-white flex items-center justify-between shrink-0 shadow-lg z-10">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
             <Hash size={24} />
           </div>
           <div>
-            <h3 className="font-black text-base">دردشة شعبة {user.stream}</h3>
-            <span className="text-[10px] text-blue-100 font-bold uppercase tracking-widest">تواصل مباشر وآمن</span>
+            <h3 className="font-black text-base md:text-xl">دردشة شعبة {user.stream}</h3>
+            <div className="flex items-center gap-2 text-[10px] md:text-xs font-bold text-blue-100">
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+              156 طالب يراجعون الآن
+            </div>
           </div>
         </div>
-        <button className="p-2 hover:bg-white/10 rounded-xl"><MoreVertical size={20} /></button>
+        <div className="flex items-center gap-1 md:gap-3">
+           <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 text-xs font-black">
+             <Users size={16} /> الأعضاء
+           </button>
+           <button className="p-2.5 hover:bg-white/10 rounded-xl transition-all"><MoreVertical size={20} /></button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/50">
-        {isLoading ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
-            <Loader2 className="animate-spin" size={32} />
-            <p className="text-xs font-black">جاري جلب المحادثات...</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center p-10">
-            <Hash size={48} className="mb-4 opacity-20" />
-            <p className="text-sm font-black text-slate-400">لا توجد رسائل بعد في هذه الشعبة.</p>
-            <p className="text-[10px] font-bold mt-1">كن أول من يحيي زملائه! 👋</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-3 ${msg.isMe ? 'flex-row-reverse' : ''} animate-slide-up`}>
-              <div className="shrink-0 self-end">
-                <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-blue-100">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.avatarSeed}`} className="w-full h-full" alt="avatar" />
-                </div>
-              </div>
-              <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                {!msg.isMe && <span className="text-[10px] font-black text-slate-400 mb-1 mr-1">{msg.sender}</span>}
-                <div className={`px-5 py-3 rounded-2xl text-sm font-medium shadow-sm border ${
-                  msg.isMe 
-                    ? 'bg-blue-600 text-white border-blue-500 rounded-tr-none' 
-                    : 'bg-white text-gray-800 border-gray-100 rounded-tl-none'
-                }`}>
-                  {msg.content}
-                </div>
-                <span className="text-[9px] text-gray-400 mt-1 px-1">{msg.timestamp}</span>
+      {/* Messages Area - Flexible Height */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 md:space-y-8 custom-scrollbar bg-[#F8FAFC]">
+        <div className="flex flex-col items-center mb-10">
+           <div className="px-6 py-2.5 bg-white shadow-sm text-blue-600 rounded-full text-[10px] md:text-xs font-black border border-blue-50 uppercase tracking-widest mb-4 flex items-center gap-2">
+             <ShieldCheck size={14} /> غرفتك الدراسية الآمنة
+           </div>
+           <p className="text-gray-400 text-[11px] md:text-sm font-medium text-center max-w-sm leading-relaxed">
+             أهلاً بك في فضاء طلاب {user.stream}. تبادل الأسئلة، الحلول، والتحفيز مع زملائك من كل ولايات الوطن.
+           </p>
+        </div>
+
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex gap-3 md:gap-5 ${msg.isMe ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-2`}>
+            <div className="shrink-0 pt-1">
+              <div className={`w-9 h-9 md:w-12 md:h-12 rounded-2xl overflow-hidden border-2 transition-transform hover:scale-110 ${msg.isMe ? 'border-blue-500' : 'border-white'} shadow-md`}>
+                <img 
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.avatarSeed}`} 
+                  alt={msg.sender} 
+                  className="w-full h-full object-cover bg-gray-100"
+                />
               </div>
             </div>
-          ))
-        )}
+            
+            <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
+              {!msg.isMe && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="text-[11px] md:text-xs font-black text-gray-800">{msg.sender}</span>
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-500 text-[8px] font-black rounded-full border border-blue-100 uppercase">طالب</span>
+                </div>
+              )}
+              <div className={`px-5 py-3.5 md:px-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] text-[13px] md:text-[16px] font-medium leading-relaxed shadow-sm border ${
+                msg.isMe 
+                  ? 'bg-blue-600 text-white rounded-tr-none border-blue-500 shadow-blue-100' 
+                  : 'bg-white text-gray-800 rounded-tl-none border-gray-100'
+              }`}>
+                {msg.content}
+              </div>
+              <div className="flex items-center gap-2 mt-2 px-2">
+                <span className="text-[9px] md:text-[10px] text-gray-400 font-bold">{msg.timestamp}</span>
+                {msg.isMe && <span className="text-blue-500 text-[8px] font-black">تم الإرسال</span>}
+              </div>
+            </div>
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-6 bg-white border-t border-gray-100">
-        <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
+      {/* Message Input - Fixed at Bottom */}
+      <div className="p-4 md:p-8 bg-white border-t border-gray-100 shrink-0 z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <div className="max-w-5xl mx-auto flex items-center gap-3 bg-gray-50 p-2 md:p-3 rounded-2xl md:rounded-[2.5rem] border border-gray-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-50 transition-all shadow-inner">
+          <button className="p-3 text-gray-400 hover:text-blue-600 transition-colors">
+            <Sparkles size={20} />
+          </button>
           <input 
             type="text" 
-            placeholder="اكتب رسالة لزملائك..." 
-            className="flex-1 bg-transparent border-none px-4 py-2 outline-none font-bold text-right text-sm"
+            placeholder="اكتب رسالة لزملائك في الشعبة..." 
+            className="flex-1 bg-transparent border-none px-2 md:px-4 py-3 text-[13px] md:text-base outline-none font-bold text-right"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
           />
           <button 
-            onClick={handleSendMessage} 
-            disabled={!inputValue.trim()} 
-            className="bg-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-100 disabled:opacity-50 hover:scale-105 active:scale-95 transition-all"
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim()}
+            className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 text-white rounded-xl md:rounded-3xl flex items-center justify-center shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-105 transition-all disabled:opacity-50 active:scale-95 group"
           >
-            <Send size={18} className="rotate-180" />
+            <Send size={20} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
           </button>
         </div>
+        <p className="text-center text-[8px] md:text-[10px] text-gray-300 font-bold mt-3 uppercase tracking-widest hidden md:block">
+          التزم بقواعد الاحترام المتبادل لضمان استمرارية حسابك
+        </p>
       </div>
     </div>
   );
