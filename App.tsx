@@ -1,27 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
-  Globe, 
-  Home,
-  Menu,
-  X,
-  FileText,
-  Youtube,
-  Mic,
-  Volume2,
-  VolumeX,
-  Users,
-  UserCircle,
-  CalendarDays,
-  MessageSquare,
-  Search,
-  Bell,
-  Flame,
-  LogOut,
-  BrainCircuit,
-  ShieldCheck
+  Globe, Home, Menu, X, FileText, Youtube, Mic, Volume2, VolumeX, 
+  Users, UserCircle, CalendarDays, MessageSquare, Search, Bell, 
+  Flame, LogOut, BrainCircuit, ShieldCheck, Phone
 } from 'lucide-react';
 import { UserState, Post } from './types.ts';
-import { INITIAL_POSTS } from './constants.tsx';
+import { auth, db } from './services/firebaseService';
+import { onAuthStateChanged, signOut } from "https://esm.sh/firebase@10.8.0/auth";
+import { ref, onValue, off } from "https://esm.sh/firebase@10.8.0/database";
+
 import Auth from './components/Auth.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import AiAssistant from './components/AiAssistant.tsx';
@@ -47,21 +35,13 @@ const NavItem: React.FC<{
     blue: 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm',
     indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 shadow-sm',
     red: 'bg-red-50 text-red-600 border-red-200 shadow-sm',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-sm',
     black: 'bg-slate-800 text-white border-slate-700 shadow-sm'
-  }[colorClass as 'blue' | 'indigo' | 'red' | 'black'] || 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm';
-
-  const inactiveClasses = colorClass === 'black' 
-    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
-    : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600';
+  }[colorClass as any] || 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm';
 
   return (
-    <button 
-      onClick={onClick}
-      className={`w-full flex items-center px-4 py-3 rounded-2xl border transition-all duration-200 group ${active ? activeClasses : `border-transparent ${inactiveClasses}`}`}
-    >
-      <div className={`ml-3 transition-transform group-hover:rotate-6 ${active ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`}>
-        {icon}
-      </div>
+    <button onClick={onClick} className={`w-full flex items-center px-4 py-3 rounded-2xl border transition-all duration-200 group ${active ? activeClasses : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-blue-600'}`}>
+      <div className={`ml-3 transition-transform group-hover:rotate-6 ${active ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`}>{icon}</div>
       <span className="font-black text-[14px]">{label}</span>
     </button>
   );
@@ -72,231 +52,114 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'summaries' | 'videos' | 'community' | 'profile' | 'studyplan' | 'streamchat'>('dashboard');
   const [showAi, setShowAi] = useState(false);
   const [showLiveTutor, setShowLiveTutor] = useState(false);
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
-  const [isAdminMode, setIsAdminMode] = useState(window.location.pathname.startsWith('/admin'));
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setIsAdminMode(window.location.pathname.startsWith('/admin'));
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const userRef = ref(db, `users/${firebaseUser.uid}`);
+        onValue(userRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setUser(snapshot.val());
+          }
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    const postsRef = ref(db, 'posts');
+    onValue(postsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const postsArray = Object.keys(data).map(key => ({ ...data[key], id: key })).reverse();
+        setPosts(postsArray);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      off(postsRef);
     };
-    window.addEventListener('popstate', handleLocationChange);
-    handleLocationChange();
-    return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  const handleAuthComplete = (newUser: UserState) => {
-    setUser(newUser);
-    if (soundEnabled) audioService.playSuccess();
-    if (newUser.rank === 'المشرف العام' || newUser.email === 'nacero1234@gmail.com') {
-      setIsAdminMode(true);
-      window.history.pushState({}, '', '/admin');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    }
-  };
-
   const logout = () => {
+    signOut(auth);
     setUser(null);
     window.history.pushState({}, '', '/');
-    setIsAdminMode(false);
-  };
-
-  const toggleSound = () => {
-    const nextState = !soundEnabled;
-    setSoundEnabled(nextState);
-    if (nextState) audioService.playClick();
   };
 
   const navigateTo = (tab: any) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
-    if (window.location.pathname !== '/') {
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    }
-    setIsAdminMode(false);
     if (soundEnabled) audioService.playClick();
   };
 
-  if (isAdminMode) {
-    return (
-      <div className="h-screen w-screen bg-[#020617] overflow-hidden" dir="rtl">
-        <AdminPanel 
-          user={user || { name: 'المشرف العام', stream: 'علوم تجريبية', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'المشرف العام' }} 
-          posts={posts} 
-          onPostUpdate={setPosts} 
-          onBroadcast={setAdminBroadcast} 
-        />
-        <button 
-           onClick={() => { window.history.pushState({}, '', '/'); setIsAdminMode(false); window.dispatchEvent(new PopStateEvent('popstate')); }}
-           className="fixed bottom-6 left-6 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 text-xs font-black transition-all z-[1000] backdrop-blur-md"
-        >
-          الخروج من لوحة التحكم
-        </button>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Auth onComplete={handleAuthComplete} />;
-  }
-
-  const isChatTab = activeTab === 'streamchat';
+  if (!user) return <Auth onComplete={setUser} />;
 
   return (
-    <div className="h-screen w-screen bg-[#FDFDFF] font-['Cairo',_sans-serif] flex text-right overflow-hidden relative pb-[env(safe-area-inset-bottom)]" dir="rtl">
+    <div className="h-screen w-screen bg-[#FDFDFF] font-['Cairo'] flex text-right overflow-hidden relative" dir="rtl">
       <MotivationalToast />
-
       {adminBroadcast && (
-        <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
-          <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
-            <ShieldCheck size={20} />
-          </div>
-          <span className="flex-1 drop-shadow-sm">{adminBroadcast}</span>
-          <button 
-            onClick={() => { setAdminBroadcast(null); if(soundEnabled) audioService.playClick(); }} 
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors border border-white/20"
-          >
-            <X size={18} />
-          </button>
+        <div className="fixed top-0 left-0 right-0 z-[1000] bg-red-600 text-white p-4 text-center font-black animate-slide-up">
+          {adminBroadcast} <button onClick={() => setAdminBroadcast(null)} className="mr-4 underline">إغلاق</button>
         </div>
       )}
 
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <aside className={`
-        fixed inset-y-0 right-0 z-50 w-72 md:w-80 bg-white border-l border-gray-100 flex flex-col transition-transform duration-300 transform
-        lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="p-6 md:p-10 flex flex-col h-full overflow-y-auto no-scrollbar">
-          <div className="flex items-center justify-between mb-8 md:mb-12 shrink-0">
-            <div className="flex items-center group cursor-pointer" onClick={() => navigateTo('dashboard')}>
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 ml-3 md:ml-4 transition-all group-hover:rotate-6 group-hover:scale-110">
-                <Globe size={24} strokeWidth={3} />
-              </div>
-              <span className="text-xl md:text-2xl font-black text-blue-900 italic tracking-tighter shrink-0">DzairEdu <span className="text-blue-600">Pro</span></span>
-            </div>
-            <button className="lg:hidden p-2 text-gray-400" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
+      <aside className={`fixed inset-y-0 right-0 z-50 w-72 bg-white border-l border-gray-100 flex flex-col transition-transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+        <div className="p-8 flex flex-col h-full overflow-y-auto no-scrollbar">
+          <div className="flex items-center group cursor-pointer mb-12" onClick={() => navigateTo('dashboard')}>
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl ml-4"><Globe size={24} strokeWidth={3} /></div>
+            <span className="text-2xl font-black text-blue-900 italic">DzairEdu <span className="text-blue-600">Pro</span></span>
           </div>
 
           <nav className="space-y-1.5 flex-1">
-            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-3">القائمة الرئيسية</p>
             <NavItem active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} icon={<Home size={20} />} label="لوحة التحكم" />
             <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan')} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
-            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="غرفة الشعبة" colorClass="blue" />
+            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="دردشة الشعبة" colorClass="blue" />
             <NavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={20} />} label="ساحة المجتمع" />
             <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
             <NavItem active={activeTab === 'summaries'} onClick={() => navigateTo('summaries')} icon={<FileText size={20} />} label="الملخصات" />
             
-            <div className="pt-8">
-               <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">ميزات حصرية</p>
-               <div className="space-y-2.5 px-1">
-                 <button 
-                   onClick={() => { setShowLiveTutor(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
-                   className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all group"
-                  >
-                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
-                    <Mic size={18} />
-                  </div>
-                  <span className="font-black text-[14px]">الأستاذ المباشر</span>
-                </button>
-                
-                <button 
-                  onClick={() => { setShowAi(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
-                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all group"
-                 >
-                 <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
-                   <BrainCircuit size={18} />
-                 </div>
-                 <span className="font-black text-[14px]">مساعد Dzair AI</span>
-                </button>
-               </div>
-            </div>
-
-            {user.rank === 'المشرف العام' && (
-              <div className="pt-8">
-                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">الإدارة</p>
-                <button 
-                  onClick={() => { window.history.pushState({}, '', '/admin'); setIsAdminMode(true); window.dispatchEvent(new PopStateEvent('popstate')); }}
-                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-slate-900 text-white shadow-xl hover:scale-[1.02] transition-all group"
-                >
-                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center ml-3">
-                    <ShieldCheck size={18} />
-                  </div>
-                  <span className="font-black text-[14px]">لوحة التحكم الإدارية</span>
-                </button>
-              </div>
-            )}
+            <button onClick={() => { setShowLiveTutor(true); setIsSidebarOpen(false); }} className="w-full mt-6 flex items-center px-4 py-3.5 rounded-2xl bg-indigo-600 text-white shadow-lg group">
+              <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center ml-3"><Phone size={18} /></div>
+              <span className="font-black text-[14px]">الأستاذ المباشر</span>
+            </button>
           </nav>
 
-          <div className="mt-6 shrink-0 border-t border-gray-100 pt-6">
-            <div 
-              onClick={() => navigateTo('profile')}
-              className={`flex items-center p-3.5 rounded-2xl border transition-all cursor-pointer group shadow-sm ${activeTab === 'profile' ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'}`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white ml-3 shadow-lg shadow-blue-100 border-2 border-white shrink-0">
-                 {user.name.charAt(0)}
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <div onClick={() => navigateTo('profile')} className={`flex items-center p-3.5 rounded-2xl border bg-gray-50 border-gray-100 cursor-pointer hover:bg-gray-100`}>
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white ml-3 shadow-lg">
+                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.avatarSeed}`} className="w-full h-full rounded-xl" />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-[13px] font-black text-gray-800 truncate leading-none mb-1">{user.name}</p>
+                <p className="text-[13px] font-black text-gray-800 truncate">{user.name}</p>
                 <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest">{user.rank}</p>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); logout(); }} className="text-gray-300 hover:text-red-500 transition-colors p-2 shrink-0"><LogOut size={18} /></button>
+              <button onClick={logout} className="text-gray-300 hover:text-red-500 p-2"><LogOut size={18} /></button>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-gray-100 px-4 md:px-8 py-3.5 md:py-5 flex justify-between items-center shrink-0">
+        <header className="bg-white/80 backdrop-blur-2xl border-b border-gray-100 px-8 py-5 flex justify-between items-center z-40">
+          <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-gray-50 rounded-xl"><Menu size={22} /></button>
+          <div className="text-xl font-black text-blue-900">DzairEdu <span className="text-blue-600">Pro</span></div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-gray-50 rounded-xl text-gray-500 hover:bg-gray-100 transition-all"><Menu size={22} /></button>
-            <div className="text-lg md:text-xl font-black text-blue-900 italic tracking-tighter">DzairEdu <span className="text-blue-600">Pro</span></div>
-          </div>
-          
-          <div className="hidden lg:flex flex-1 max-w-2xl mx-4">
-            <div className="relative group w-full">
-              <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="ابحث عن دروس، ملخصات، أو تمارين البكالوريا..." 
-                className="w-full pr-12 pl-6 py-2.5 bg-gray-50/80 border border-transparent focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-[14px] outline-none font-bold transition-all shadow-inner text-right" 
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="hidden sm:flex bg-orange-50 px-4 py-2 rounded-xl border border-orange-100 items-center gap-2 shadow-sm">
-              <Flame size={18} className="text-orange-500" />
-              <span className="text-xs font-black text-orange-700">{user.streak} أيام</span>
-            </div>
-
-            <button 
-              onClick={toggleSound}
-              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-white border-gray-100 text-gray-400'}`}
-            >
-              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
-            
-            <button className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 relative hover:text-blue-600 transition-all group">
-               <Bell size={20} />
-               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></span>
-            </button>
+             <div className="bg-orange-50 px-4 py-2 rounded-xl border border-orange-100 items-center gap-2 flex"><Flame size={18} className="text-orange-500" /><span className="text-xs font-black text-orange-700">{user.streak} أيام</span></div>
           </div>
         </header>
 
-        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
-          <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
-            {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
+        <main className="flex-1 overflow-y-auto custom-scrollbar p-10 pb-32">
+          <div className="max-w-7xl mx-auto h-full">
+            {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={() => {}} />}
             {activeTab === 'profile' && <Profile user={user} />}
-            {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={setPosts} />}
+            {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={() => {}} />}
             {activeTab === 'summaries' && <Summaries user={user} soundEnabled={soundEnabled} />}
             {activeTab === 'videos' && <VideoLessons />}
             {activeTab === 'studyplan' && <StudyPlan user={user} />}
@@ -304,30 +167,9 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        {!showAi && !showLiveTutor && !isChatTab && (
-          <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
-            <button 
-              onClick={() => { setShowLiveTutor(true); if(soundEnabled) audioService.playClick(); }}
-              className="bg-indigo-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
-            >
-              <Mic size={24} className="md:w-8 md:h-8" />
-            </button>
-            <button 
-              onClick={() => { setShowAi(true); if(soundEnabled) audioService.playClick(); }}
-              className="bg-blue-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
-            >
-              <BrainCircuit size={24} className="md:w-8 md:h-8" />
-            </button>
-          </div>
-        )}
-
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
-          <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
-          <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
-          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
-          <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
-          <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
-        </nav>
+        <button onClick={() => setShowAi(true)} className="fixed bottom-12 left-12 bg-blue-600 text-white p-5 rounded-[2rem] shadow-2xl hover:scale-110 transition-all z-40">
+           <BrainCircuit size={32} />
+        </button>
 
         {showAi && <AiAssistant user={user} onClose={() => setShowAi(false)} />}
         {showLiveTutor && <LiveTutor userName={user.name} onClose={() => setShowLiveTutor(false)} />}
