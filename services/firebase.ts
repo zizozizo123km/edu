@@ -10,9 +10,11 @@ const firebaseConfig = {
   projectId: "kids-d433f",
   storageBucket: "kids-d433f.firebasestorage.app",
   messagingSenderId: "1004459151815",
-  appId: "1:1004459151815:web:2dce5f69ebc5c30222c9e2"
+  appId: "1:1004459151815:web:2dce5f69ebc5c30222c9e2",
+  measurementId: "G-SZZ9SWP475"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
+export default app;
