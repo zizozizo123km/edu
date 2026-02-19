@@ -3,19 +3,29 @@ import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 import { AI_SYSTEM_INSTRUCTION } from "../constants";
 
 export class GeminiService {
+  private dynamicApiKey: string | null = null;
+
   constructor() {}
 
   /**
+   * تعيين مفتاح API ديناميكي يتم جلبه من قاعدة البيانات
+   */
+  public setDynamicApiKey(key: string) {
+    this.dynamicApiKey = key;
+  }
+
+  /**
    * يجلب مفتاح API النشط. 
-   * الأولوية للمفتاح المخزن يدوياً من لوحة التحكم، ثم مفتاح البيئة الافتراضي.
+   * الأولوية للمفتاح المجلوب من DB، ثم التخزين المحلي، ثم بيئة النظام.
    */
   public getActiveApiKey(): string {
+    if (this.dynamicApiKey) return this.dynamicApiKey;
     const override = localStorage.getItem('GEMINI_API_KEY_OVERRIDE');
     return override || process.env.API_KEY || "";
   }
 
   /**
-   * يحفظ مفتاح API جديد في التخزين المحلي.
+   * يحفظ مفتاح API في التخزين المحلي كخيار ثانوي.
    */
   public setApiKeyOverride(key: string) {
     if (key && key.trim().length > 10) {

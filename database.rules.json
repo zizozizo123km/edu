@@ -1,0 +1,69 @@
+
+{
+  "rules": {
+    /* القواعد الافتراضية: لا قراءة أو كتابة عامة */
+    ".read": false,
+    ".write": false,
+
+    /* إدارة المستخدمين */
+    "users": {
+      // المشرف يرى قائمة كل المستخدمين
+      ".read": "auth.token.email === 'nacero1234@gmail.com'",
+      "$uid": {
+        // المستخدم يرى ويعدل بياناته الخاصة، والمشرف يتحكم في الجميع
+        ".read": "auth != null && (auth.uid === $uid || auth.token.email === 'nacero1234@gmail.com')",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'nacero1234@gmail.com')"
+      }
+    },
+
+    /* مجتمع الطلاب */
+    "community_posts": {
+      // الجميع يقرأ المنشورات
+      ".read": "auth != null",
+      // أي مستخدم مسجل يمكنه النشر
+      ".write": "auth != null",
+      "$post_id": {
+        // الحذف متاح فقط لصاحب المنشور أو المشرف
+        ".remove": "auth.token.email === 'nacero1234@gmail.com' || data.child('uid').val() === auth.uid"
+      }
+    },
+
+    /* غرف الدردشة الخاصة بالشعب */
+    "chats": {
+      "$stream_id": {
+        // قراءة وكتابة لجميع الطلاب المسجلين
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$message_id": {
+          // المشرف يمكنه حذف أي رسالة
+          ".remove": "auth.token.email === 'nacero1234@gmail.com'"
+        }
+      }
+    },
+
+    /* الملخصات التعليمية */
+    "summaries": {
+      // الطلاب يقرأون فقط
+      ".read": "auth != null",
+      // المشرف فقط من يضيف أو يحذف الملخصات
+      ".write": "auth.token.email === 'nacero1234@gmail.com'"
+    },
+
+    /* إعدادات النظام (Gemini API Key) */
+    "admin_config": {
+      // الطلاب يحتاجون قراءة المفتاح لتشغيل الذكاء الاصطناعي
+      ".read": "auth != null",
+      // المشرف فقط يعدل المفتاح
+      ".write": "auth.token.email === 'nacero1234@gmail.com'"
+    },
+
+    /* نظام البث والتنبيهات العامة */
+    "broadcasts": {
+      ".read": "auth != null",
+      "current": {
+        // المشرف فقط يرسل التنبيهات
+        ".write": "auth.token.email === 'nacero1234@gmail.com'"
+      }
+    }
+  }
+}
