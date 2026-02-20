@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Globe, 
@@ -19,12 +18,8 @@ import {
   Flame,
   LogOut,
   BrainCircuit,
-  ShieldCheck,
-  Loader2
+  ShieldCheck
 } from 'lucide-react';
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { ref, onValue } from "firebase/database";
-import { auth, db } from './services/firebase.ts';
 import { UserState, Post } from './types.ts';
 import { INITIAL_POSTS } from './constants.tsx';
 import Auth from './components/Auth.tsx';
@@ -40,11 +35,40 @@ import MotivationalToast from './components/MotivationalToast.tsx';
 import StreamChat from './components/StreamChat.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import { audioService } from './services/audioService.ts';
-import { geminiService } from './services/geminiService.ts';
+
+const NavItem: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  colorClass?: string;
+}> = ({ active, onClick, icon, label, colorClass = 'blue' }) => {
+  const activeClasses = {
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 shadow-sm',
+    red: 'bg-red-50 text-red-600 border-red-200 shadow-sm',
+    black: 'bg-slate-800 text-white border-slate-700 shadow-sm'
+  }[colorClass as 'blue' | 'indigo' | 'red' | 'black'] || 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm';
+
+  const inactiveClasses = colorClass === 'black' 
+    ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+    : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600';
+
+  return (
+    <button 
+      onClick={onClick}
+      className={`w-full flex items-center px-4 py-3 rounded-2xl border transition-all duration-200 group ${active ? activeClasses : `border-transparent ${inactiveClasses}`}`}
+    >
+      <div className={`ml-3 transition-transform group-hover:rotate-6 ${active ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`}>
+        {icon}
+      </div>
+      <span className="font-black text-[14px]">{label}</span>
+    </button>
+  );
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserState | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'summaries' | 'videos' | 'community' | 'profile' | 'studyplan' | 'streamchat'>('dashboard');
   const [showAi, setShowAi] = useState(false);
   const [showLiveTutor, setShowLiveTutor] = useState(false);
@@ -52,73 +76,30 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [adminBroadcast, setAdminBroadcast] = useState<string | null>(null);
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(window.location.pathname.startsWith('/admin'));
 
   useEffect(() => {
-    // 1. الاستماع لمفتاح API من قاعدة البيانات
-    const configRef = ref(db, 'admin_config/gemini_api_key');
-    const unsubConfig = onValue(configRef, (snap) => {
-      const key = snap.val();
-      if (key) {
-        geminiService.setDynamicApiKey(key);
-        console.log("Gemini API Key Synced from DB");
-      }
-    });
-
-    // 2. الاستماع لإعلانات المشرف
-    const broadcastRef = ref(db, 'broadcasts/current');
-    const unsubBroadcast = onValue(broadcastRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.message) {
-        setAdminBroadcast(data.message);
-        if (soundEnabled) audioService.playSuccess();
-      }
-    });
-
-    // 3. إدارة حالة المصادقة
-    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        const isAdmin = firebaseUser.email?.trim().toLowerCase() === 'nacero1234@gmail.com';
-        const loggedUser: UserState = {
-          uid: firebaseUser.uid,
-          name: isAdmin ? 'المشرف العام' : (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'طالب'),
-          email: firebaseUser.email || '',
-          stream: 'علوم تجريبية',
-          xp: isAdmin ? 99999 : 2450,
-          streak: isAdmin ? 365 : 7,
-          avatarSeed: isAdmin ? 'admin' : firebaseUser.uid,
-          joinDate: firebaseUser.metadata.creationTime || new Date().toISOString(),
-          rank: isAdmin ? 'المشرف العام' : 'طالب متميز'
-        };
-        setUser(loggedUser);
-        if (isAdmin) setIsAdminMode(true);
-      } else {
-        if (user?.email !== 'nacero1234@gmail.com') {
-           setUser(null);
-           setIsAdminMode(false);
-        }
-      }
-      setIsAuthLoading(false);
-    });
-    
-    return () => {
-      unsubAuth();
-      unsubBroadcast();
-      unsubConfig();
+    const handleLocationChange = () => {
+      setIsAdminMode(window.location.pathname.startsWith('/admin'));
     };
-  }, [user?.email, soundEnabled]);
+    window.addEventListener('popstate', handleLocationChange);
+    handleLocationChange();
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
 
   const handleAuthComplete = (newUser: UserState) => {
     setUser(newUser);
     if (soundEnabled) audioService.playSuccess();
-    if (newUser.email?.trim().toLowerCase() === 'nacero1234@gmail.com') {
+    if (newUser.rank === 'المشرف العام' || newUser.email === 'nacero1234@gmail.com') {
       setIsAdminMode(true);
+      window.history.pushState({}, '', '/admin');
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   };
 
-  const logout = async () => {
-    await signOut(auth);
+  const logout = () => {
     setUser(null);
+    window.history.pushState({}, '', '/');
     setIsAdminMode(false);
   };
 
@@ -131,33 +112,28 @@ const App: React.FC = () => {
   const navigateTo = (tab: any) => {
     setActiveTab(tab);
     setIsSidebarOpen(false);
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
     setIsAdminMode(false);
     if (soundEnabled) audioService.playClick();
   };
 
-  if (isAuthLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#FDFDFF]">
-        <Loader2 className="animate-spin text-blue-600" size={40} />
-      </div>
-    );
-  }
-
-  // وضع المشرف
-  if (user?.email?.trim().toLowerCase() === 'nacero1234@gmail.com') {
+  if (isAdminMode) {
     return (
       <div className="h-screen w-screen bg-[#020617] overflow-hidden" dir="rtl">
         <AdminPanel 
-          user={user} 
+          user={user || { name: 'المشرف العام', stream: 'علوم تجريبية', xp: 0, streak: 0, avatarSeed: 'admin', joinDate: '', rank: 'المشرف العام' }} 
           posts={posts} 
           onPostUpdate={setPosts} 
           onBroadcast={setAdminBroadcast} 
         />
         <button 
-           onClick={logout}
-           className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl shadow-2xl font-black text-xs transition-all z-[1000] border border-white/10"
+           onClick={() => { window.history.pushState({}, '', '/'); setIsAdminMode(false); window.dispatchEvent(new PopStateEvent('popstate')); }}
+           className="fixed bottom-6 left-6 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 text-xs font-black transition-all z-[1000] backdrop-blur-md"
         >
-          خروج المسؤول
+          الخروج من لوحة التحكم
         </button>
       </div>
     );
@@ -174,60 +150,150 @@ const App: React.FC = () => {
       <MotivationalToast />
 
       {adminBroadcast && (
-        <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 to-rose-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4">
-          <ShieldCheck size={20} className="animate-pulse" />
-          <span>تنبيه إداري: {adminBroadcast}</span>
-          <button onClick={() => setAdminBroadcast(null)} className="p-1.5 hover:bg-white/10 rounded-lg border border-white/20"><X size={16} /></button>
+        <div className="fixed top-0 left-0 right-0 z-[1000] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white px-6 py-4 text-center font-black text-xs md:text-sm animate-in slide-in-from-top duration-500 shadow-2xl flex items-center justify-center gap-4 border-b border-red-400/30 backdrop-blur-md">
+          <div className="bg-white/20 p-1.5 rounded-lg animate-pulse">
+            <ShieldCheck size={20} />
+          </div>
+          <span className="flex-1 drop-shadow-sm">{adminBroadcast}</span>
+          <button 
+            onClick={() => { setAdminBroadcast(null); if(soundEnabled) audioService.playClick(); }} 
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors border border-white/20"
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
 
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-      <aside className={`fixed inset-y-0 right-0 z-50 w-72 bg-white border-l border-gray-100 flex flex-col transition-transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
-        <div className="p-8 flex flex-col h-full overflow-y-auto">
-          <div className="flex items-center justify-between mb-12">
+      <aside className={`
+        fixed inset-y-0 right-0 z-50 w-72 md:w-80 bg-white border-l border-gray-100 flex flex-col transition-transform duration-300 transform
+        lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-6 md:p-10 flex flex-col h-full overflow-y-auto no-scrollbar">
+          <div className="flex items-center justify-between mb-8 md:mb-12 shrink-0">
             <div className="flex items-center group cursor-pointer" onClick={() => navigateTo('dashboard')}>
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-xl ml-3">
-                <Globe size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 ml-3 md:ml-4 transition-all group-hover:rotate-6 group-hover:scale-110">
+                <Globe size={24} strokeWidth={3} />
               </div>
-              <span className="text-xl font-black text-blue-900 italic">DzairEdu <span className="text-blue-600">Pro</span></span>
+              <span className="text-xl md:text-2xl font-black text-blue-900 italic tracking-tighter shrink-0">DzairEdu <span className="text-blue-600">Pro</span></span>
             </div>
+            <button className="lg:hidden p-2 text-gray-400" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
           </div>
 
-          <nav className="space-y-2 flex-1">
+          <nav className="space-y-1.5 flex-1">
+            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-3">القائمة الرئيسية</p>
             <NavItem active={activeTab === 'dashboard'} onClick={() => navigateTo('dashboard')} icon={<Home size={20} />} label="لوحة التحكم" />
-            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="غرفة الشعبة" />
+            <NavItem active={activeTab === 'studyplan'} onClick={() => navigateTo('studyplan')} icon={<CalendarDays size={20} />} label="خطة الدراسة" colorClass="indigo" />
+            <NavItem active={activeTab === 'streamchat'} onClick={() => navigateTo('streamchat')} icon={<MessageSquare size={20} />} label="غرفة الشعبة" colorClass="blue" />
             <NavItem active={activeTab === 'community'} onClick={() => navigateTo('community')} icon={<Users size={20} />} label="ساحة المجتمع" />
-            <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية" colorClass="red" />
+            <NavItem active={activeTab === 'videos'} onClick={() => navigateTo('videos')} icon={<Youtube size={20} />} label="دروس مرئية AI" colorClass="red" />
             <NavItem active={activeTab === 'summaries'} onClick={() => navigateTo('summaries')} icon={<FileText size={20} />} label="الملخصات" />
+            
+            <div className="pt-8">
+               <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">ميزات حصرية</p>
+               <div className="space-y-2.5 px-1">
+                 <button 
+                   onClick={() => { setShowLiveTutor(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
+                   className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all group"
+                  >
+                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
+                    <Mic size={18} />
+                  </div>
+                  <span className="font-black text-[14px]">الأستاذ المباشر</span>
+                </button>
+                
+                <button 
+                  onClick={() => { setShowAi(true); setIsSidebarOpen(false); if(soundEnabled) audioService.playClick(); }}
+                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all group"
+                 >
+                 <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ml-3 shadow-sm group-hover:rotate-12 transition-transform">
+                   <BrainCircuit size={18} />
+                 </div>
+                 <span className="font-black text-[14px]">مساعد Dzair AI</span>
+                </button>
+               </div>
+            </div>
+
+            {user.rank === 'المشرف العام' && (
+              <div className="pt-8">
+                <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] px-4 mb-4">الإدارة</p>
+                <button 
+                  onClick={() => { window.history.pushState({}, '', '/admin'); setIsAdminMode(true); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  className="w-full flex items-center px-4 py-3.5 rounded-2xl bg-slate-900 text-white shadow-xl hover:scale-[1.02] transition-all group"
+                >
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center ml-3">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <span className="font-black text-[14px]">لوحة التحكم الإدارية</span>
+                </button>
+              </div>
+            )}
           </nav>
 
-          <div className="mt-6 border-t pt-6">
-            <div onClick={() => navigateTo('profile')} className="flex items-center p-3 rounded-2xl bg-gray-50 border border-gray-100 cursor-pointer">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white ml-3">{user.name.charAt(0)}</div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-black text-gray-800 truncate">{user.name}</p>
-                <p className="text-[10px] text-blue-600 font-black">{user.rank}</p>
+          <div className="mt-6 shrink-0 border-t border-gray-100 pt-6">
+            <div 
+              onClick={() => navigateTo('profile')}
+              className={`flex items-center p-3.5 rounded-2xl border transition-all cursor-pointer group shadow-sm ${activeTab === 'profile' ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100 hover:bg-gray-100'}`}
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white ml-3 shadow-lg shadow-blue-100 border-2 border-white shrink-0">
+                 {user.name.charAt(0)}
               </div>
-              <button onClick={(e) => { e.stopPropagation(); logout(); }} className="p-2 text-gray-400 hover:text-red-500"><LogOut size={18} /></button>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-[13px] font-black text-gray-800 truncate leading-none mb-1">{user.name}</p>
+                <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest">{user.rank}</p>
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); logout(); }} className="text-gray-300 hover:text-red-500 transition-colors p-2 shrink-0"><LogOut size={18} /></button>
             </div>
           </div>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-gray-100 px-6 py-4 flex justify-between items-center shrink-0">
-          <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-gray-50 rounded-xl"><Menu size={22} /></button>
-          <div className="text-lg font-black text-blue-900">DzairEdu <span className="text-blue-600">Pro</span></div>
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header className="bg-white/80 backdrop-blur-2xl sticky top-0 z-40 border-b border-gray-100 px-4 md:px-8 py-3.5 md:py-5 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={toggleSound} className={`w-10 h-10 rounded-xl border flex items-center justify-center ${soundEnabled ? 'bg-blue-50 text-blue-600' : 'text-gray-400'}`}>
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-gray-50 rounded-xl text-gray-500 hover:bg-gray-100 transition-all"><Menu size={22} /></button>
+            <div className="text-lg md:text-xl font-black text-blue-900 italic tracking-tighter">DzairEdu <span className="text-blue-600">Pro</span></div>
+          </div>
+          
+          <div className="hidden lg:flex flex-1 max-w-2xl mx-4">
+            <div className="relative group w-full">
+              <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="ابحث عن دروس، ملخصات، أو تمارين البكالوريا..." 
+                className="w-full pr-12 pl-6 py-2.5 bg-gray-50/80 border border-transparent focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-50 rounded-2xl text-[14px] outline-none font-bold transition-all shadow-inner text-right" 
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="hidden sm:flex bg-orange-50 px-4 py-2 rounded-xl border border-orange-100 items-center gap-2 shadow-sm">
+              <Flame size={18} className="text-orange-500" />
+              <span className="text-xs font-black text-orange-700">{user.streak} أيام</span>
+            </div>
+
+            <button 
+              onClick={toggleSound}
+              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center transition-all ${soundEnabled ? 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm' : 'bg-white border-gray-100 text-gray-400'}`}
+            >
               {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+            
+            <button className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 relative hover:text-blue-600 transition-all group">
+               <Bell size={20} />
+               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm group-hover:scale-125 transition-transform"></span>
             </button>
           </div>
         </header>
 
-        <main className={`flex-1 overflow-y-auto ${isChatTab ? 'p-0' : 'p-6 md:p-10 pb-28'}`}>
-          <div className="max-w-7xl mx-auto h-full">
+        <main className={`flex-1 overflow-y-auto custom-scrollbar ${isChatTab ? 'p-0 pb-20 lg:pb-0' : 'p-4 md:p-10 pb-28 md:pb-32'}`}>
+          <div className={`h-full ${isChatTab ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}`}>
             {activeTab === 'dashboard' && <Dashboard user={user} posts={posts} onPostUpdate={setPosts} />}
             {activeTab === 'profile' && <Profile user={user} />}
             {activeTab === 'community' && <Community user={user} posts={posts} onPostUpdate={setPosts} />}
@@ -238,9 +304,28 @@ const App: React.FC = () => {
           </div>
         </main>
 
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-3 flex justify-between items-center z-50 pb-8">
+        {!showAi && !showLiveTutor && !isChatTab && (
+          <div className="fixed bottom-24 right-4 md:bottom-12 md:left-12 flex flex-col gap-3 lg:gap-4 z-40">
+            <button 
+              onClick={() => { setShowLiveTutor(true); if(soundEnabled) audioService.playClick(); }}
+              className="bg-indigo-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
+            >
+              <Mic size={24} className="md:w-8 md:h-8" />
+            </button>
+            <button 
+              onClick={() => { setShowAi(true); if(soundEnabled) audioService.playClick(); }}
+              className="bg-blue-600 text-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] shadow-2xl hover:scale-110 active:scale-95 transition-all group border-2 border-white"
+            >
+              <BrainCircuit size={24} className="md:w-8 md:h-8" />
+            </button>
+          </div>
+        )}
+
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-50 pb-8">
           <button onClick={() => navigateTo('dashboard')} className={`p-2 ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}><Home size={24} /></button>
-          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4"><BrainCircuit size={24} /></button>
+          <button onClick={() => navigateTo('streamchat')} className={`p-2 ${activeTab === 'streamchat' ? 'text-blue-600' : 'text-gray-400'}`}><MessageSquare size={24} /></button>
+          <button onClick={() => setShowAi(true)} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg -translate-y-4 border-4 border-white"><BrainCircuit size={24} /></button>
+          <button onClick={() => navigateTo('community')} className={`p-2 ${activeTab === 'community' ? 'text-blue-600' : 'text-gray-400'}`}><Users size={24} /></button>
           <button onClick={() => navigateTo('profile')} className={`p-2 ${activeTab === 'profile' ? 'text-blue-600' : 'text-gray-400'}`}><UserCircle size={24} /></button>
         </nav>
 
@@ -250,12 +335,5 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-const NavItem: React.FC<{active: boolean, onClick: () => void, icon: any, label: string, colorClass?: string}> = ({active, onClick, icon, label, colorClass = 'blue'}) => (
-  <button onClick={onClick} className={`w-full flex items-center px-4 py-3 rounded-2xl border transition-all ${active ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}>
-    <div className="ml-3">{icon}</div>
-    <span className="font-black text-sm">{label}</span>
-  </button>
-);
 
 export default App;

@@ -36,7 +36,7 @@ export interface PostComment {
 }
 
 export interface Post {
-  id: number | string;
+  id: number;
   author: string;
   time: string;
   content: string;
@@ -46,7 +46,6 @@ export interface Post {
   isLiked?: boolean;
   tag: string;
   avatarSeed: string;
-  uid?: string;
 }
 
 export interface StreamMessage {
@@ -56,11 +55,9 @@ export interface StreamMessage {
   timestamp: string;
   isMe: boolean;
   avatarSeed: string;
-  uid?: string;
 }
 
 export interface UserState {
-  uid?: string;
   name: string;
   email?: string;
   stream: StreamType | '';
